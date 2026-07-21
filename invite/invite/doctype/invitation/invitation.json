@@ -1,0 +1,242 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "autoname": "format:INV-{event}-{####}",
+ "creation": "2024-07-20 10:00:00.000000",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "details_section",
+  "event",
+  "guest",
+  "guest_name",
+  "invite_code",
+  "invitation_type",
+  "status",
+  "qr_code",
+  "qr_code_image",
+  "personalized_invite_card",
+  "delivery_section",
+  "delivery_method",
+  "recipient_contact",
+  "sent_at",
+  "delivered_at",
+  "delivery_status",
+  "delivery_error",
+  "viewed_at",
+  "response_section",
+  "rsvp_status",
+  "response_date",
+  "number_of_attendees",
+  "message",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "details_section",
+   "fieldtype": "Section Break",
+   "label": "Invitation Details"
+  },
+  {
+   "fieldname": "event",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Event",
+   "options": "Event",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "guest",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Guest",
+   "options": "Guest",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fetch_from": "guest.full_name",
+   "fieldname": "guest_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Guest Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "invite_code",
+   "fieldtype": "Data",
+   "label": "Invite Code",
+   "read_only": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "invitation_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Invitation Type",
+   "options": "Digital\nPrint\nBoth"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Draft\nReady\nSent\nDelivered\nFailed\nCancelled"
+  },
+  {
+   "fieldname": "qr_code",
+   "fieldtype": "Data",
+   "label": "QR Code Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "qr_code_image",
+   "fieldtype": "Attach Image",
+   "label": "QR Code Image",
+   "read_only": 1
+  },
+  {
+   "fieldname": "personalized_invite_card",
+   "fieldtype": "Attach",
+   "label": "Personalized Invite Card"
+  },
+  {
+   "fieldname": "delivery_section",
+   "fieldtype": "Section Break",
+   "label": "Delivery"
+  },
+  {
+   "fieldname": "delivery_method",
+   "fieldtype": "Select",
+   "label": "Delivery Method",
+   "options": "\nWhatsApp\nSMS\nEmail\nManual"
+  },
+  {
+   "fieldname": "recipient_contact",
+   "fieldtype": "Data",
+   "label": "Recipient Contact"
+  },
+  {
+   "fieldname": "sent_at",
+   "fieldtype": "Datetime",
+   "label": "Sent At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "delivered_at",
+   "fieldtype": "Datetime",
+   "label": "Delivered At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "delivery_status",
+   "fieldtype": "Select",
+   "label": "Delivery Status",
+   "options": "Pending\nSent\nDelivered\nFailed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "delivery_error",
+   "fieldtype": "Small Text",
+   "label": "Delivery Error",
+   "read_only": 1
+  },
+  {
+   "fieldname": "viewed_at",
+   "fieldtype": "Datetime",
+   "label": "Viewed At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "response_section",
+   "fieldtype": "Section Break",
+   "label": "Response"
+  },
+  {
+   "fieldname": "rsvp_status",
+   "fieldtype": "Link",
+   "label": "RSVP Status",
+   "options": "RSVP Status"
+  },
+  {
+   "fieldname": "response_date",
+   "fieldtype": "Datetime",
+   "label": "Response Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "number_of_attendees",
+   "fieldtype": "Int",
+   "label": "Number of Attendees",
+   "default": 1
+  },
+  {
+   "fieldname": "message",
+   "fieldtype": "Text Editor",
+   "label": "Message"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-07-20 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Invite",
+ "name": "Invitation",
+ "naming_rule": "By script",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Event Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Committee Member",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "invite_code,guest_name",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "invite_code",
+ "track_changes": 1
+}

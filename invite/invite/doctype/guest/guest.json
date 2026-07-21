@@ -1,0 +1,316 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "autoname": "format:GST-{event}-{first_name}-{last_name}",
+ "creation": "2024-07-20 10:00:00.000000",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "details_section",
+  "event",
+  "first_name",
+  "last_name",
+  "full_name",
+  "email",
+  "mobile_no",
+  "phone",
+  "category",
+  "guest_type",
+  "plus_one",
+  "plus_one_name",
+  "notes",
+  "invitation_section",
+  "invitation_status",
+  "invite_code",
+  "qr_code",
+  "invitation_sent_on",
+  "rsvp_section",
+  "rsvp_status",
+  "rsvp_date",
+  "number_of_attendees",
+  "contribution_section",
+  "pledge_amount",
+  "paid_amount",
+  "outstanding_amount",
+  "check_in_section",
+  "checked_in",
+  "checked_in_at",
+  "checked_in_by"
+ ],
+ "fields": [
+  {
+   "fieldname": "details_section",
+   "fieldtype": "Section Break",
+   "label": "Guest Details"
+  },
+  {
+   "fieldname": "event",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Event",
+   "options": "Event",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "first_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "First Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "last_name",
+   "fieldtype": "Data",
+   "label": "Last Name"
+  },
+  {
+   "fieldname": "full_name",
+   "fieldtype": "Data",
+   "label": "Full Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Email",
+   "options": "Email",
+   "search_index": 1
+  },
+  {
+   "fieldname": "mobile_no",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Mobile No",
+   "options": "Phone",
+   "search_index": 1
+  },
+  {
+   "fieldname": "phone",
+   "fieldtype": "Data",
+   "label": "Phone",
+   "options": "Phone"
+  },
+  {
+   "fieldname": "category",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Category",
+   "options": "Guest Category"
+  },
+  {
+   "fieldname": "guest_type",
+   "fieldtype": "Select",
+   "label": "Guest Type",
+   "options": "Individual\nCouple\nFamily\nGroup\nOrganization"
+  },
+  {
+   "default": "0",
+   "fieldname": "plus_one",
+   "fieldtype": "Check",
+   "label": "Plus One"
+  },
+  {
+   "depends_on": "plus_one",
+   "fieldname": "plus_one_name",
+   "fieldtype": "Data",
+   "label": "Plus One Name"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "invitation_section",
+   "fieldtype": "Section Break",
+   "label": "Invitation"
+  },
+  {
+   "fieldname": "invitation_status",
+   "fieldtype": "Select",
+   "label": "Invitation Status",
+   "options": "Ready\nNot Sent\nSent\nDelivered\nFailed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "invite_code",
+   "fieldtype": "Data",
+   "label": "Invite Code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "qr_code",
+   "fieldtype": "Attach Image",
+   "label": "QR Code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "invitation_sent_on",
+   "fieldtype": "Datetime",
+   "label": "Invitation Sent On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "rsvp_section",
+   "fieldtype": "Section Break",
+   "label": "RSVP"
+  },
+  {
+   "fieldname": "rsvp_status",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "RSVP Status",
+   "options": "RSVP Status"
+  },
+  {
+   "fieldname": "rsvp_date",
+   "fieldtype": "Date",
+   "label": "RSVP Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "number_of_attendees",
+   "fieldtype": "Int",
+   "label": "Number of Attendees",
+   "default": 1
+  },
+  {
+   "fieldname": "contribution_section",
+   "fieldtype": "Section Break",
+   "label": "Contribution"
+  },
+  {
+   "fieldname": "pledge_amount",
+   "fieldtype": "Currency",
+   "label": "Pledged Amount",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "paid_amount",
+   "fieldtype": "Currency",
+   "label": "Paid Amount",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "outstanding_amount",
+   "fieldtype": "Currency",
+   "label": "Outstanding Amount",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "check_in_section",
+   "fieldtype": "Section Break",
+   "label": "Check-In"
+  },
+  {
+   "default": "0",
+   "fieldname": "checked_in",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Checked In",
+   "read_only": 1
+  },
+  {
+   "fieldname": "checked_in_at",
+   "fieldtype": "Datetime",
+   "label": "Checked In At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "checked_in_by",
+   "fieldtype": "Link",
+   "label": "Checked In By",
+   "options": "User",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [
+  {
+   "group": "Invitations",
+   "link_doctype": "Invitation",
+   "link_fieldname": "guest"
+  },
+  {
+   "group": "Contributions",
+   "link_doctype": "Contribution",
+   "link_fieldname": "guest"
+  },
+  {
+   "group": "Check-Ins",
+   "link_doctype": "Check-In",
+   "link_fieldname": "guest"
+  }
+ ],
+ "modified": "2024-07-20 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Invite",
+ "name": "Guest",
+ "naming_rule": "By script",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Event Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Committee Member",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "All",
+   "share": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "first_name,last_name,full_name,email,mobile_no",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "full_name",
+ "track_changes": 1
+}

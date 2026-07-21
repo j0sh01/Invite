@@ -1,0 +1,213 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2024-07-20 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "general_tab",
+  "default_currency",
+  "default_event_type",
+  "default_reminder_days",
+  "branding_tab",
+  "app_name",
+  "app_logo",
+  "favicon",
+  "qr_settings_tab",
+  "qr_code_foreground_color",
+  "qr_code_background_color",
+  "qr_code_size",
+  "invitation_tab",
+  "default_invitation_message",
+  "default_thank_you_template",
+  "sms_settings_tab",
+  "sms_provider",
+  "sms_api_key",
+  "sms_sender_id",
+  "whatsapp_settings_tab",
+  "whatsapp_provider",
+  "whatsapp_api_key",
+  "whatsapp_phone_number_id",
+  "whatsapp_business_number",
+  "whatsapp_api_version"
+ ],
+ "fields": [
+  {
+   "fieldname": "general_tab",
+   "fieldtype": "Tab Break",
+   "label": "General"
+  },
+  {
+   "default": "TZS",
+   "fieldname": "default_currency",
+   "fieldtype": "Link",
+   "label": "Default Currency",
+   "options": "Currency"
+  },
+  {
+   "fieldname": "default_event_type",
+   "fieldtype": "Link",
+   "label": "Default Event Type",
+   "options": "Event Type"
+  },
+  {
+   "default": "3",
+   "fieldname": "default_reminder_days",
+   "fieldtype": "Int",
+   "label": "Default Reminder Days Before"
+  },
+  {
+   "fieldname": "branding_tab",
+   "fieldtype": "Tab Break",
+   "label": "Branding"
+  },
+  {
+   "fieldname": "app_name",
+   "fieldtype": "Data",
+   "label": "App Name"
+  },
+  {
+   "fieldname": "app_logo",
+   "fieldtype": "Attach Image",
+   "label": "App Logo"
+  },
+  {
+   "description": "An icon file with .ico extension. Should be 16x16 px.",
+   "fieldname": "favicon",
+   "fieldtype": "Attach",
+   "label": "Favicon"
+  },
+  {
+   "fieldname": "qr_settings_tab",
+   "fieldtype": "Tab Break",
+   "label": "QR Code Settings"
+  },
+  {
+   "default": "#000000",
+   "fieldname": "qr_code_foreground_color",
+   "fieldtype": "Color",
+   "label": "QR Code Foreground Color"
+  },
+  {
+   "default": "#FFFFFF",
+   "fieldname": "qr_code_background_color",
+   "fieldtype": "Color",
+   "label": "QR Code Background Color"
+  },
+  {
+   "default": "8",
+   "fieldname": "qr_code_size",
+   "fieldtype": "Int",
+   "label": "QR Code Size (px)"
+  },
+  {
+   "fieldname": "invitation_tab",
+   "fieldtype": "Tab Break",
+   "label": "Invitation"
+  },
+  {
+   "fieldname": "default_invitation_message",
+   "fieldtype": "Text Editor",
+   "label": "Default Invitation Message"
+  },
+  {
+   "fieldname": "default_thank_you_template",
+   "fieldtype": "Text Editor",
+   "label": "Default Thank You Template"
+  },
+  {
+   "fieldname": "sms_settings_tab",
+   "fieldtype": "Tab Break",
+   "label": "SMS Settings"
+  },
+  {
+   "fieldname": "sms_provider",
+   "fieldtype": "Select",
+   "label": "SMS Provider",
+   "options": "\nBeem Africa\nTwilio\nAfrica's Talking\nInfoBip\nOther"
+  },
+  {
+   "fieldname": "sms_api_key",
+   "fieldtype": "Password",
+   "label": "SMS API Key"
+  },
+  {
+   "fieldname": "sms_sender_id",
+   "fieldtype": "Data",
+   "label": "SMS Sender ID"
+  },
+  {
+   "fieldname": "whatsapp_settings_tab",
+   "fieldtype": "Tab Break",
+   "label": "WhatsApp Settings"
+  },
+  {
+   "fieldname": "whatsapp_provider",
+   "fieldtype": "Select",
+   "label": "WhatsApp Provider",
+   "options": "\nBeem Africa\nTwilio\nMeta API\nOther"
+  },
+  {
+   "fieldname": "whatsapp_api_key",
+   "fieldtype": "Password",
+   "label": "WhatsApp API Key"
+  },
+  {
+   "description": "The Phone Number ID from Meta WhatsApp Cloud API dashboard",
+   "fieldname": "whatsapp_phone_number_id",
+   "fieldtype": "Data",
+   "label": "WhatsApp Phone Number ID"
+  },
+  {
+   "fieldname": "whatsapp_business_number",
+   "fieldtype": "Data",
+   "label": "WhatsApp Business Number",
+   "description": "Include country code, e.g. +255712345678"
+  },
+  {
+   "default": "v21.0",
+   "fieldname": "whatsapp_api_version",
+   "fieldtype": "Data",
+   "label": "WhatsApp API Version"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2024-07-20 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Invite",
+ "name": "Event Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "Event Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "All",
+   "share": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

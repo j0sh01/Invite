@@ -1,0 +1,157 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "autoname": "format:CI-{event}-{####}",
+ "creation": "2024-07-20 10:00:00.000000",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "event",
+  "guest",
+  "guest_name",
+  "invite_code",
+  "invitation",
+  "checked_in_at",
+  "checked_in_by",
+  "check_in_method",
+  "number_of_attendees",
+  "is_duplicate",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "event",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Event",
+   "options": "Event",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "guest",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Guest",
+   "options": "Guest",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fetch_from": "guest.full_name",
+   "fieldname": "guest_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Guest Name",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "guest.invite_code",
+   "fieldname": "invite_code",
+   "fieldtype": "Data",
+   "label": "Invite Code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "invitation",
+   "fieldtype": "Link",
+   "label": "Invitation",
+   "options": "Invitation"
+  },
+  {
+   "fieldname": "checked_in_at",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Checked In At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "checked_in_by",
+   "fieldtype": "Link",
+   "label": "Checked In By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "check_in_method",
+   "fieldtype": "Select",
+   "label": "Check-In Method",
+   "options": "\nQR Code Scan\nManual Entry\nInvite Code\nName Search"
+  },
+  {
+   "default": "1",
+   "fieldname": "number_of_attendees",
+   "fieldtype": "Int",
+   "label": "Number of Attendees"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_duplicate",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Duplicate Scan",
+   "read_only": 1
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-07-20 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Invite",
+ "name": "Check-In",
+ "naming_rule": "By script",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Event Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Committee Member",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "guest_name,invite_code",
+ "sort_field": "checked_in_at",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "guest_name",
+ "track_changes": 1
+}

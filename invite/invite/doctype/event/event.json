@@ -1,0 +1,343 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "autoname": "format:EV-{event_name}-{YYYY}",
+ "creation": "2024-07-20 10:00:00.000000",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",  "field_order": [
+  "details_tab",
+  "event_name",
+  "event_type",
+  "event_status",
+  "event_date",
+  "event_time",
+  "end_date",
+  "end_time",
+  "venue",
+  "location_address",
+  "organizer_name",
+  "organizer_contact",
+  "organizer_email",
+  "max_guests",
+  "description",
+  "image",
+  "config_tab",
+  "currency",
+  "default_contribution_type",
+  "allow_partial_payments",
+  "enable_reminders",
+  "reminder_days_before",
+  "invitation_message",
+  "thank_you_template",
+  "contribution_reminder_message",
+  "qr_position",
+  "enable_public_rsvp",
+  "public_rsvp_code",
+  "statistics_section",
+  "total_guests",
+  "total_invited",
+  "total_rsvped",
+  "total_accepted",
+  "total_declined",
+  "total_contributions",
+  "total_contribution_amount",
+  "total_checked_in"
+ ],
+ "fields": [
+  {
+   "fieldname": "details_tab",
+   "fieldtype": "Tab Break",
+   "label": "Event Details"
+  },
+  {
+   "fieldname": "event_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Event Name",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "event_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Event Type",
+   "options": "Event Type",
+   "reqd": 1
+  },
+  {
+   "fieldname": "event_status",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Event Status",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "event_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Event Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "event_time",
+   "fieldtype": "Time",
+   "label": "Event Time"
+  },
+  {
+   "fieldname": "end_date",
+   "fieldtype": "Date",
+   "label": "End Date"
+  },
+  {
+   "fieldname": "end_time",
+   "fieldtype": "Time",
+   "label": "End Time"
+  },
+  {
+   "fieldname": "venue",
+   "fieldtype": "Data",
+   "label": "Venue"
+  },
+  {
+   "fieldname": "location_address",
+   "fieldtype": "Small Text",
+   "label": "Address"
+  },
+  {
+   "fieldname": "organizer_name",
+   "fieldtype": "Data",
+   "label": "Organizer Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "organizer_contact",
+   "fieldtype": "Data",
+   "label": "Organizer Contact",
+   "options": "Phone"
+  },
+  {
+   "fieldname": "organizer_email",
+   "fieldtype": "Data",
+   "label": "Organizer Email",
+   "options": "Email"
+  },
+  {
+   "fieldname": "max_guests",
+   "fieldtype": "Int",
+   "label": "Max Guests"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Text Editor",
+   "label": "Description"
+  },
+  {
+   "fieldname": "image",
+   "fieldtype": "Attach Image",
+   "label": "Event Image"
+  },
+  {
+   "fieldname": "config_tab",
+   "fieldtype": "Tab Break",
+   "label": "Configuration"
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency"
+  },
+  {
+   "default": "Cash Contribution",
+   "fieldname": "default_contribution_type",
+   "fieldtype": "Link",
+   "label": "Default Contribution Type",
+   "options": "Contribution Type"
+  },
+  {
+   "default": "1",
+   "fieldname": "allow_partial_payments",
+   "fieldtype": "Check",
+   "label": "Allow Partial Payments"
+  },
+  {
+   "default": "1",
+   "fieldname": "enable_reminders",
+   "fieldtype": "Check",
+   "label": "Enable Reminders"
+  },
+  {
+   "default": "3",
+   "fieldname": "reminder_days_before",
+   "fieldtype": "Int",
+   "label": "Reminder Days Before"
+  },
+  {
+   "fieldname": "invitation_message",
+   "fieldtype": "Text Editor",
+   "label": "Invitation Message"
+  },
+  {
+   "fieldname": "thank_you_template",
+   "fieldtype": "Text Editor",
+   "label": "Thank You Message Template"
+  },
+  {
+   "fieldname": "contribution_reminder_message",
+   "fieldtype": "Text Editor",
+   "label": "Contribution Reminder Message"
+  },
+  {
+   "default": "Right",
+   "fieldname": "qr_position",
+   "fieldtype": "Select",
+   "label": "QR Code Position on Card",
+   "options": "Left\nCenter\nRight"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_public_rsvp",
+   "fieldtype": "Check",
+   "label": "Enable Public RSVP"
+  },
+  {
+   "fieldname": "public_rsvp_code",
+   "fieldtype": "Data",
+   "label": "Public RSVP Code"
+  },
+  {
+   "fieldname": "statistics_section",
+   "fieldtype": "Section Break",
+   "label": "Event Statistics"
+  },
+  {
+   "fieldname": "total_guests",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Total Guests",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_invited",
+   "fieldtype": "Int",
+   "label": "Total Invited",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_rsvped",
+   "fieldtype": "Int",
+   "label": "Total RSVPed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_accepted",
+   "fieldtype": "Int",
+   "label": "Total Accepted",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_declined",
+   "fieldtype": "Int",
+   "label": "Total Declined",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_contributions",
+   "fieldtype": "Int",
+   "label": "Total Contributions",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_contribution_amount",
+   "fieldtype": "Currency",
+   "label": "Total Contribution Amount",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_checked_in",
+   "fieldtype": "Int",
+   "label": "Total Checked In",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "image_field": "image",
+ "index_web_pages_for_search": 1,
+ "links": [
+  {
+   "group": "Guests",
+   "link_doctype": "Guest",
+   "link_fieldname": "event"
+  },
+  {
+   "group": "Invitations",
+   "link_doctype": "Invitation",
+   "link_fieldname": "event"
+  },
+  {
+   "group": "Contributions",
+   "link_doctype": "Contribution",
+   "link_fieldname": "event"
+  },
+  {
+   "group": "Check-Ins",
+   "link_doctype": "Check-In",
+   "link_fieldname": "event"
+  }
+ ],
+ "modified": "2024-07-20 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Invite",
+ "name": "Event",
+ "naming_rule": "By script",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Event Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "All",
+   "share": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "event_name,event_type,venue",
+ "sort_field": "event_date",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "event_name",
+ "track_changes": 1
+}

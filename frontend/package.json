@@ -1,0 +1,29 @@
+{
+  "name": "invite-ui",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build --base=/assets/invite/frontend/",
+    "copy-html-entry": "echo 'HTML entry handled by frappe-ui plugin'",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "frappe-ui": "^0.1.189",
+    "lodash": "^4.17.21",
+    "pinia": "^2.0.33",
+    "socket.io-client": "^4.7.2",
+    "vue": "^3.5.13",
+    "vue-qrcode-reader": "^5.7.3",
+    "vue-router": "^4.2.2"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^4.2.3",
+    "@vitejs/plugin-vue-jsx": "^3.0.1",
+    "autoprefixer": "^10.4.14",
+    "postcss": "^8.4.5",
+    "tailwindcss": "^3.4.15",
+    "vite": "^4.4.9"
+  }
+}

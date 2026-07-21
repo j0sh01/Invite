@@ -1,0 +1,218 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "autoname": "format:CONT-{event}-{####}",
+ "creation": "2024-07-20 10:00:00.000000",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "event",
+  "guest",
+  "guest_name",
+  "contribution_type",
+  "type",
+  "item_description",
+  "amount_section",
+  "currency",
+  "pledged_amount",
+  "paid_amount",
+  "outstanding_amount",
+  "payment_details_section",
+  "payment_status",
+  "payment_method",
+  "payment_date",
+  "transaction_reference",
+  "mobile_money_provider",
+  "mobile_money_number",
+  "notes",
+  "recorded_by"
+ ],
+ "fields": [
+  {
+   "fieldname": "event",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Event",
+   "options": "Event",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "guest",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Guest",
+   "options": "Guest",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fetch_from": "guest.full_name",
+   "fieldname": "guest_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Guest Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "contribution_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Contribution Type",
+   "options": "Contribution Type",
+   "reqd": 1
+  },
+  {
+   "fieldname": "type",
+   "fieldtype": "Select",
+   "label": "Contribution Nature",
+   "options": "Pledge\nPayment\nPartial Payment"
+  },
+  {
+   "depends_on": "eval:doc.contribution_type && doc.contribution_type.is_cash==0",
+   "fieldname": "item_description",
+   "fieldtype": "Small Text",
+   "label": "Item Description"
+  },
+  {
+   "fieldname": "amount_section",
+   "fieldtype": "Section Break",
+   "label": "Amount Details"
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency"
+  },
+  {
+   "fieldname": "pledged_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Pledged Amount",
+   "options": "currency"
+  },
+  {
+   "fieldname": "paid_amount",
+   "fieldtype": "Currency",
+   "label": "Paid Amount",
+   "options": "currency"
+  },
+  {
+   "fieldname": "outstanding_amount",
+   "fieldtype": "Currency",
+   "label": "Outstanding Amount",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "payment_details_section",
+   "fieldtype": "Section Break",
+   "label": "Payment Details"
+  },
+  {
+   "default": "Pending",
+   "fieldname": "payment_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Payment Status",
+   "options": "Pending\nPartially Paid\nPaid\nCancelled"
+  },
+  {
+   "fieldname": "payment_method",
+   "fieldtype": "Select",
+   "label": "Payment Method",
+   "options": "\nCash\nMobile Money\nBank Transfer\nCheque\nIn-Kind\nOther"
+  },
+  {
+   "fieldname": "payment_date",
+   "fieldtype": "Date",
+   "label": "Payment Date"
+  },
+  {
+   "fieldname": "transaction_reference",
+   "fieldtype": "Data",
+   "label": "Transaction Reference"
+  },
+  {
+   "depends_on": "eval:doc.payment_method=='Mobile Money'",
+   "fieldname": "mobile_money_provider",
+   "fieldtype": "Select",
+   "label": "Mobile Money Provider",
+   "options": "\nM-Pesa\nTigo Pesa\nAirtel Money\nHalopesa\nEzy Pesa\nOther"
+  },
+  {
+   "depends_on": "eval:doc.payment_method=='Mobile Money'",
+   "fieldname": "mobile_money_number",
+   "fieldtype": "Data",
+   "label": "Mobile Money Number"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "recorded_by",
+   "fieldtype": "Link",
+   "label": "Recorded By",
+   "options": "User",
+   "read_only": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-07-20 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Invite",
+ "name": "Contribution",
+ "naming_rule": "By script",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Event Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "All",
+   "share": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "guest_name,transaction_reference",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "guest_name",
+ "track_changes": 1
+}

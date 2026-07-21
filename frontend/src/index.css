@@ -1,0 +1,5 @@
+@import "frappe-ui/style.css";
+
+@layer components {
+  /* App-specific styles can go here */
+}
