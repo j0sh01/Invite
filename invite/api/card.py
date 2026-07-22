@@ -2,29 +2,57 @@
 # MIT License. See license.txt
 
 import frappe
-from frappe.utils import get_url, today
+from frappe.utils import get_url
 
 
 @frappe.whitelist()
 def generate_invitation_card(invitation):
-	"""Generate an invitation card PDF with QR code and event details."""
+	"""Generate a two-page invitation card PDF.
+
+	Page 1 — Frappe's built-in Event print format (shows all event details
+	         in the standard Frappe layout).
+	Page 2 — Big centered QR code for scanning at the venue.
+
+	If the event has no image uploaded, the request is rejected so that
+	users upload an event image first before generating cards.
+	"""
 	from frappe.utils.pdf import get_pdf
 
 	inv = frappe.get_doc("Invitation", invitation)
 	event = frappe.get_doc("Event", inv.event)
 
+	# Validate: event must have an image to generate a card
+	if not event.image:
+		frappe.throw(
+			_("Please upload an Event Image in Event Settings before generating invitation cards."),
+			title=_("Event Image Required")
+		)
+
 	# Auto-generate QR code if not present
 	if not inv.qr_code_image:
 		frappe.get_attr(
-			"invite.invite.doctype.invitation.invitation.generate_qr_code"
+			"invite.doctype.invitation.invitation.generate_qr_code"
 		)(invitation)
 		inv.reload()
 
-	# Get QR position from event settings (default: Right)
-	qr_position = getattr(event, "qr_position", None) or "Right"
+	# Step 1: Get Frappe's built-in Event print format HTML for page 1
+	print_html = frappe.get_print(
+		doctype="Event",
+		name=event.name,
+		print_format="Event",
+		no_letterhead=1,
+	)
 
-	card_html = _build_card_html(event, inv, qr_position)
-	pdf_content = get_pdf(card_html)
+	# Step 2: Generate the QR code page HTML
+	qr_page_html = _build_qr_page_html(event, inv)
+
+	# Step 3: Combine — insert QR styles into <head> and QR page before </body>
+	qr_styles = _qr_page_styles()
+	combined_html = print_html.replace("</head>", qr_styles + "\n\t</head>")
+	combined_html = combined_html.replace("</body>", qr_page_html + "\n</body>")
+
+	# Step 4: Convert combined HTML to PDF
+	pdf_content = get_pdf(combined_html)
 
 	import os
 	from frappe.utils import get_site_path
@@ -62,221 +90,73 @@ def download_invitation_card(invitation):
 	return result
 
 
-def _format_time(time_val):
-	"""Format a time value (timedelta or time) to HH:MM AM/PM string."""
-	if hasattr(time_val, "strftime"):
-		return time_val.strftime("%I:%M %p")
-	# timedelta object: extract hours and minutes
-	total_seconds = int(time_val.total_seconds())
-	hours = total_seconds // 3600
-	minutes = (total_seconds % 3600) // 60
-	period = "AM" if hours < 12 else "PM"
-	if hours == 0:
-		hours_12 = 12
-	elif hours > 12:
-		hours_12 = hours - 12
-	else:
-		hours_12 = hours
-	return f"{hours_12}:{minutes:02d} {period}"
-
-
-def _build_card_html(event, inv, qr_position="Right"):
-	"""Build a single-page invitation card with the event photo as full background
-	and QR code overlaid at the bottom (Left / Center / Right).
-
-	qr_position: 'Left', 'Center', or 'Right' — controls QR code placement at bottom.
+def _qr_page_styles():
+	"""Return CSS styles for the QR code page (appended to Frappe's print format)."""
+	return """
+	<style>
+		/* -- QR code page (page 2) -- */
+		.qr-page {
+			page-break-before: always;
+			width: 210mm;
+			height: 297mm;
+		}
+		.qr-page table {
+			width: 100%;
+			height: 100%;
+		}
+		.qr-page td {
+			text-align: center;
+			vertical-align: middle;
+		}
+		.qr-inner {
+			display: inline-block;
+			background: #f8f8f8;
+			padding: 24px;
+			border: 1px solid #eee;
+		}
+		.qr-inner img {
+			width: 240px;
+			height: 240px;
+		}
+		.qr-label {
+			margin-top: 20px;
+			font-size: 14px;
+			color: #888;
+			letter-spacing: 2px;
+			text-transform: uppercase;
+		}
+		.invite-code {
+			margin-top: 12px;
+			font-size: 11px;
+			color: #aaa;
+			letter-spacing: 1px;
+		}
+	</style>
 	"""
-	event_image = get_url(event.image) if event.image else ""
+
+
+def _build_qr_page_html(event, inv):
+	"""Build only the QR code page HTML (page 2).
+
+	This gets appended to Frappe's built-in Event print format (page 1).
+	"""
 	qr_image_url = get_url(inv.qr_code_image) if inv.qr_code_image else ""
-	event_date = event.event_date.strftime("%d %B %Y") if event.event_date else ""
-	event_time = _format_time(event.event_time) if event.event_time else ""
-
-	# QR code horizontal alignment at the bottom of the card
-	qr_align = qr_position.lower()  # left, center, right
-	if qr_align == "left":
-		qr_container_style = "left: 36px; transform: none;"
-	elif qr_align == "center":
-		qr_container_style = "left: 50%; transform: translateX(-50%);"
-	else:  # right (default)
-		qr_container_style = "right: 36px; transform: none;"
-
-	# Background style: full-bleed image or fallback gradient
-	if event_image:
-		bg_style = f"background: url('{event_image}') center center / cover no-repeat;"
-	else:
-		bg_style = "background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);"
+	qr_img = f'<img src="{qr_image_url}" alt="QR Code" />' if qr_image_url else '<p style="color:#ccc;font-size:16px;">No QR code available</p>'
 
 	return f"""
-	<!DOCTYPE html>
-	<html>
-	<head>
-		<meta charset="utf-8">
-		<style>
-			@page {{
-				size: A4 portrait;
-				margin: 0;
-			}}
-			* {{
-				box-sizing: border-box;
-			}}
-			body {{
-				margin: 0;
-				padding: 0;
-				width: 210mm;
-				height: 297mm;
-				overflow: hidden;
-				font-family: 'Helvetica', 'Arial', sans-serif;
-			}}
-
-			/* ── Full-bleed card ── */
-			.card {{
-				position: relative;
-				width: 100%;
-				height: 100%;
-				{bg_style}
-			}}
-
-			/* ── Dark overlay for text readability ── */
-			.overlay {{
-				position: absolute;
-				inset: 0;
-				background: rgba(0, 0, 0, 0.45);
-				display: flex;
-				flex-direction: column;
-				justify-content: center;
-				align-items: center;
-				padding: 48px 40px 140px;
-				text-align: center;
-				color: #fff;
-			}}
-
-			/* ── Event name ── */
-			.event-name {{
-				font-size: 36px;
-				font-weight: 700;
-				letter-spacing: 1px;
-				margin-bottom: 20px;
-				text-shadow: 0 2px 8px rgba(0,0,0,0.5);
-				line-height: 1.2;
-			}}
-
-			/* ── Decorative divider ── */
-			.divider {{
-				width: 80px;
-				height: 3px;
-				background: rgba(255,255,255,0.7);
-				margin: 0 auto 20px;
-				border-radius: 2px;
-			}}
-
-			/* ── Details block ── */
-			.details {{
-				font-size: 15px;
-				line-height: 1.8;
-				opacity: 0.92;
-				text-shadow: 0 1px 4px rgba(0,0,0,0.4);
-			}}
-			.details .row {{
-				margin-bottom: 4px;
-			}}
-			.details .label {{
-				font-weight: 600;
-				text-transform: uppercase;
-				letter-spacing: 0.5px;
-				font-size: 11px;
-				opacity: 0.75;
-				display: block;
-			}}
-
-			/* ── Organiser badge ── */
-			.organizer {{
-				margin-top: 24px;
-				padding: 10px 24px;
-				background: rgba(0, 0, 0, 0.35);
-				border-radius: 8px;
-				font-size: 13px;
-				line-height: 1.6;
-			}}
-			.organizer .label {{
-				font-weight: 600;
-				text-transform: uppercase;
-				letter-spacing: 0.5px;
-				font-size: 10px;
-				opacity: 0.75;
-				display: block;
-			}}
-
-			/* ── QR code container (bottom area) ── */
-			.qr-container {{
-				position: absolute;
-				bottom: 36px;
-				{qr_container_style}
-				text-align: center;
-				background: #fff;
-				padding: 8px;
-				border-radius: 8px;
-				box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-			}}
-			.qr-container img {{
-				width: 110px;
-				height: 110px;
-				display: block;
-				margin: 0 auto;
-				border-radius: 4px;
-			}}
-			.qr-label {{
-				margin-top: 6px;
-				font-size: 9px;
-				color: #666;
-				letter-spacing: 1px;
-				text-transform: uppercase;
-			}}
-
-			/* ── Footer ── */
-			.footer {{
-				position: absolute;
-				bottom: 10px;
-				left: 0;
-				right: 0;
-				text-align: center;
-				font-size: 8px;
-				color: rgba(255,255,255,0.4);
-				letter-spacing: 0.5px;
-			}}
-		</style>
-	</head>
-	<body>
-		<div class="card">
-			<div class="overlay">
-				<div class="event-name">{event.event_name}</div>
-				<div class="divider"></div>
-				<div class="details">
-					<div class="row">
-						<span class="label">Date</span>
-						{event_date}
+	<div class="qr-page">
+		<table>
+			<tr>
+				<td>
+					<div class="qr-inner">
+						{qr_img}
 					</div>
-					{f'<div class="row"><span class="label">Time</span>{event_time}</div>' if event_time else ''}
-					{f'<div class="row"><span class="label">Venue</span>{event.venue}</div>' if event.venue else ''}
-					{f'<div class="row"><span class="label">Address</span>{event.location_address}</div>' if event.location_address else ''}
-				</div>
-				<div class="organizer">
-					<span class="label">Organized by</span>
-					{event.organizer_name}
-					{f'<br>{event.organizer_contact}' if event.organizer_contact else ''}
-				</div>
-			</div>
-
-			<div class="qr-container">
-				{f'<img src="{qr_image_url}" alt="QR Code" />' if qr_image_url else ''}
-				<div class="qr-label">Scan to check in</div>
-			</div>
-
-			<div class="footer">
-				Generated by Invite | {inv.invite_code}
-			</div>
-		</div>
-	</body>
-	</html>
+					<div class="qr-label">Scan to check in</div>
+					<div class="invite-code">{inv.invite_code}</div>
+				</td>
+			</tr>
+		</table>
+	</div>
 	"""
 
 
@@ -341,17 +221,21 @@ def _send_event_reminders(event_doc, channel):
 				sent.append({"guest": guest.name, "channel": "Email"})
 
 			if channel in (None, "WhatsApp"):
-				_send_whatsapp(guest.mobile_no, personalized, card_path)
+				_send_whatsapp(guest.mobile_no, personalized, card_path, event_name=event_doc.name)
 				sent.append({"guest": guest.name, "channel": "WhatsApp"})
 
 			if channel in (None, "SMS") and guest.mobile_no:
-				_send_sms(guest.mobile_no, personalized)
+				_send_sms(guest.mobile_no, personalized, event_name=event_doc.name)
 				sent.append({"guest": guest.name, "channel": "SMS"})
 
 			_log_notification(guest, event_doc, f"Reminder: {event_doc.event_name}")
 
 		except Exception as e:
 			failed.append({"guest": guest.name, "error": str(e)})
+			frappe.log_error(
+				f"Event reminder failed for {guest.name}: {frappe.get_traceback()}",
+				"Send Reminder"
+			)
 
 	frappe.db.commit()
 	return {"sent": sent, "failed": failed, "total_sent": len(sent), "total_failed": len(failed)}
@@ -388,17 +272,21 @@ def _send_contribution_reminders(event_doc, channel):
 				sent.append({"guest": guest.name, "channel": "Email"})
 
 			if channel in (None, "WhatsApp"):
-				_send_whatsapp(guest.mobile_no, msg)
+				_send_whatsapp(guest.mobile_no, msg, event_name=event_doc.name)
 				sent.append({"guest": guest.name, "channel": "WhatsApp"})
 
 			if channel in (None, "SMS") and guest.mobile_no:
-				_send_sms(guest.mobile_no, msg)
+				_send_sms(guest.mobile_no, msg, event_name=event_doc.name)
 				sent.append({"guest": guest.name, "channel": "SMS"})
 
 			_log_notification(guest, event_doc, f"Contribution Reminder: {event_doc.event_name}")
 
 		except Exception as e:
 			failed.append({"guest": guest.name, "error": str(e)})
+			frappe.log_error(
+				f"Contribution reminder failed for {guest.name}: {frappe.get_traceback()}",
+				"Send Reminder"
+			)
 
 	frappe.db.commit()
 	return {"sent": sent, "failed": failed, "total_sent": len(sent), "total_failed": len(failed)}
@@ -428,17 +316,21 @@ def _send_thank_you_messages(event_doc, channel):
 				sent.append({"guest": guest.name, "channel": "Email"})
 
 			if channel in (None, "WhatsApp"):
-				_send_whatsapp(guest.mobile_no, personalized, event_doc.image)
+				_send_whatsapp(guest.mobile_no, personalized, event_doc.image, event_name=event_doc.name)
 				sent.append({"guest": guest.name, "channel": "WhatsApp"})
 
 			if channel in (None, "SMS") and guest.mobile_no:
-				_send_sms(guest.mobile_no, personalized)
+				_send_sms(guest.mobile_no, personalized, event_name=event_doc.name)
 				sent.append({"guest": guest.name, "channel": "SMS"})
 
 			_log_notification(guest, event_doc, f"Thank you for joining {event_doc.event_name}!")
 
 		except Exception as e:
 			failed.append({"guest": ci.guest, "error": str(e)})
+			frappe.log_error(
+				f"Thank you message failed for {ci.guest}: {frappe.get_traceback()}",
+				"Send Reminder"
+			)
 
 	frappe.db.commit()
 	return {"sent": sent, "failed": failed, "total_sent": len(sent), "total_failed": len(failed)}
@@ -450,9 +342,12 @@ def _send_thank_you_messages(event_doc, channel):
 
 
 def _send_email(recipient, subject, message, attachment_path=None):
-	"""Queue an email with optional attachment."""
-	import os
+	"""Queue an email with optional attachment (file URL)."""
+	import json
 	from frappe.email.doctype.email_queue.email_queue import EmailQueue
+
+	if not recipient:
+		return
 
 	email_queue = EmailQueue.new({
 		"sender": frappe.session.user,
@@ -464,49 +359,76 @@ def _send_email(recipient, subject, message, attachment_path=None):
 
 	if email_queue and attachment_path:
 		try:
-			# Resolve file URL to actual file content
-			from frappe.utils.file_manager import get_file
-			file_content, filename, _ = get_file(attachment_path)
-			email_queue.append("attachments", {
-				"fcontent": file_content,
-				"fname": filename or os.path.basename(attachment_path),
-			})
-			email_queue.save(ignore_permissions=True)
-		except Exception:
-			# Silently skip attachment if file not found
-			pass
+			# Store as file_url so Frappe's SendMailContext.include_attachments()
+			# can resolve the file content at send time
+			attachments = json.loads(email_queue.attachments) if email_queue.attachments else []
+			attachments.append({"file_url": attachment_path})
+			email_queue.db_set("attachments", json.dumps(attachments))
+		except Exception as e:
+			frappe.log_error(f"Failed to attach file to email: {e}", "Send Email")
 
 
-def _send_whatsapp(mobile_no, message, attachment_path=None):
-	"""Log WhatsApp message with optional attachment card/image.
+def _send_whatsapp(mobile_no, message, attachment_path=None, event_name=None):
+	"""Send WhatsApp message with optional card/image attachment.
 	
-	If attachment_path is provided, the file is stored alongside the log
-	so the WhatsApp integration service can send it as a media message.
-	Actual sending would integrate with a WhatsApp Business API.
+	Uses WhatsApp Cloud API if configured, otherwise logs to Notification Log.
 	
-	For media messages, the attachment should be a publicly accessible
-	URL or file path to an image/PDF that will be sent as a WhatsApp
-	media attachment.
+	If attachment_path is provided, it is sent as a media attachment
+	(image or document) along with the message text as caption.
 	"""
-	from frappe.utils import get_url
+	mobile = str(mobile_no or "").strip()
+	message = message or ""
+	attachment_path = attachment_path or ""
 
-	# Build subject with attachment info
-	attach_info = f" [Attachment: {attachment_path}]" if attachment_path else ""
-	log_subject = f"WhatsApp: {message[:80]}...{attach_info}"
+	# Try to send via WhatsApp Cloud API
+	from invite.api.whatsapp import (
+		get_whatsapp_config,
+		send_media_message,
+		send_text_message,
+	)
 
-	note = frappe.get_doc({
+	config = get_whatsapp_config()
+	api_sent = False
+
+	if config["enabled"] and mobile:
+		if attachment_path:
+			# Pass the file path directly for Frappe's get_file() to resolve
+			# attachment_path is already in /files/filename.pdf format
+			if attachment_path.startswith("http"):
+				file_path = attachment_path
+			elif attachment_path.startswith("/"):
+				file_path = attachment_path
+			else:
+				file_path = f"/{attachment_path}"
+
+			# Only attempt media if path is non-empty
+			if file_path.strip("/"):
+				success, _ = send_media_message(mobile, message, file_path)
+				api_sent = success
+			else:
+				success = send_text_message(mobile, message)
+				api_sent = success
+		else:
+			success = send_text_message(mobile, message)
+			api_sent = success
+
+	# Always log the notification for audit trail
+	attach_info = f" [Attachment API Sent]" if attachment_path and api_sent else (
+		f" [Attachment: {attachment_path}]" if attachment_path else ""
+	)
+	log_subject = f"WhatsApp: {(message or '')[:80]}...{attach_info}"
+
+	frappe.get_doc({
 		"doctype": "Notification Log",
 		"subject": log_subject,
-		"email": str(mobile_no or "").strip() or "unknown",
+		"email": mobile or "unknown",
 		"for_user": frappe.session.user,
-	})
-	note.insert(ignore_permissions=True)
-
-	# If we had a WhatsApp Business API configured, we would send here:
-	# _send_whatsapp_media_via_api(mobile_no, message, attachment_url)
+		"document_type": "Event",
+		"document_name": event_name or "",
+	}).insert(ignore_permissions=True)
 
 
-def _send_sms(mobile_no, message):
+def _send_sms(mobile_no, message, event_name=None):
 	"""Log SMS message.
 	Actual sending would integrate with an SMS provider like Beem/Africastalking.
 	"""
@@ -515,11 +437,13 @@ def _send_sms(mobile_no, message):
 		"subject": f"SMS: {message[:80]}...",
 		"email": str(mobile_no or "").strip() or "unknown",
 		"for_user": frappe.session.user,
+		"document_type": "Event",
+		"document_name": event_name or "",
 	}).insert(ignore_permissions=True)
 
 
 def _log_notification(guest, event_doc, subject):
-	"""Log a notification for audit trail."""
+	"""Log a notification for audit trail and push real-time update."""
 	frappe.get_doc({
 		"doctype": "Notification Log",
 		"subject": subject,
@@ -528,3 +452,10 @@ def _log_notification(guest, event_doc, subject):
 		"document_type": "Event",
 		"document_name": event_doc.name,
 	}).insert(ignore_permissions=True)
+
+	# Push real-time update so the sidebar refreshes immediately
+	frappe.publish_realtime(
+		"refetch_resource",
+		{"cache_key": "invite.api.notification.get_notifications"},
+		user=frappe.session.user,
+	)

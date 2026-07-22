@@ -81,7 +81,7 @@
           </div>
           <div class="grid grid-cols-2 gap-4 mt-4">
             <FormControl label="Reminder Days Before" type="number" v-model="form.reminder_days_before" />
-            <FormControl label="QR Code Position on Card" type="select" v-model="form.qr_position" :options="qrPositionOptions" />
+            <div><p class="text-xs text-gray-400 mt-8">QR code is always centered on the invitation card.</p></div>
           </div>
         </div>
 
@@ -209,7 +209,7 @@ const form = ref({
   image: '',
   invitation_message: '',
   thank_you_template: '',
-  qr_position: 'Right',
+  qr_position: 'Center',
   description: '',
 })
 
@@ -231,12 +231,6 @@ const currencyOptions = [
   { label: 'KES', value: 'KES' },
   { label: 'UGX', value: 'UGX' },
   { label: 'EUR', value: 'EUR' },
-]
-
-const qrPositionOptions = [
-  { label: __('Left'), value: 'Left' },
-  { label: __('Center'), value: 'Center' },
-  { label: __('Right'), value: 'Right' },
 ]
 
 onMounted(async () => {
@@ -274,7 +268,7 @@ async function loadEvent() {
         image: e.image || '',
         invitation_message: e.invitation_message || '',
         thank_you_template: e.thank_you_template || '',
-        qr_position: e.qr_position || 'Right',
+        qr_position: 'Center',
         description: e.description || '',
       }
     }

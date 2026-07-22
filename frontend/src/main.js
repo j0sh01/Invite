@@ -2,6 +2,7 @@ import './index.css'
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
+import { initSocket } from './socket'
 import router from './router'
 import App from './App.vue'
 
@@ -60,9 +61,13 @@ if (import.meta.env.DEV) {
       for (let key in values) {
         window[key] = values[key]
       }
+      socket = initSocket()
+      app.config.globalProperties.$socket = socket
       app.mount('#app')
     },
   )
 } else {
+  socket = initSocket()
+  app.config.globalProperties.$socket = socket
   app.mount('#app')
 }

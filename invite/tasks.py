@@ -43,6 +43,13 @@ def send_reminder_notifications():
 				"document_name": event_name,
 			}).insert(ignore_permissions=True)
 
+		# Push real-time update to the event owner so their sidebar refreshes
+		frappe.publish_realtime(
+			"refetch_resource",
+			{"cache_key": "invite.api.notification.get_notifications"},
+			user=event.owner,
+		)
+
 	frappe.log_error(
 		f"Sent reminders for {len(events)} events",
 		"Invite Reminder Notifications"
@@ -80,6 +87,13 @@ def send_thank_you_messages():
 				"document_type": "Event",
 				"document_name": event_name,
 			}).insert(ignore_permissions=True)
+
+		# Push real-time update to the event owner so their sidebar refreshes
+		frappe.publish_realtime(
+			"refetch_resource",
+			{"cache_key": "invite.api.notification.get_notifications"},
+			user=event.owner,
+		)
 
 	frappe.log_error(
 		f"Sent thank you messages for {len(events)} events",
@@ -126,6 +140,13 @@ def send_contribution_reminders():
 				"document_type": "Event",
 				"document_name": event_name,
 			}).insert(ignore_permissions=True)
+
+		# Push real-time update to the event owner so their sidebar refreshes
+		frappe.publish_realtime(
+			"refetch_resource",
+			{"cache_key": "invite.api.notification.get_notifications"},
+			user=event.owner,
+		)
 
 		frappe.log_error(
 			f"Sent contribution reminders for {len(guests_with_outstanding)} guests in {event_name}",

@@ -188,6 +188,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { frappeRequest } from '@/utils/api'
 import EventTabs from '@/components/EventTabs.vue'
+import { useNotifications } from '@/composables/notifications'
 
 const props = defineProps({ eventId: String })
 
@@ -202,6 +203,8 @@ const selectedMedium = ref('WhatsApp')
 const singleSendMedium = ref('WhatsApp')
 const sendingInvitation = ref(null)
 const sendResult = ref(null)
+
+const { showError } = useNotifications()
 
 const deliveryMediums = [
   { label: 'WhatsApp', value: 'WhatsApp', icon: 'message-circle' },
@@ -356,6 +359,7 @@ async function downloadCard(inv) {
     }
   } catch (e) {
     console.error('Failed to generate card:', e)
+    showError(e.messages?.[0] || e.message || 'Failed to generate card. Make sure the event has an image uploaded.')
   } finally {
     inv._downloading = false
     await loadInvitations()
