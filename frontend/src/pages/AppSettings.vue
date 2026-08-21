@@ -163,6 +163,24 @@
         </div>
       </div>
 
+      <!-- Frontdesk Settings -->
+      <div class="bg-white rounded-lg border p-6">
+        <h3 class="text-base font-medium text-gray-900 mb-4">
+          <div class="flex items-center gap-2">
+            <FeatherIcon name="scan" class="h-5 w-5 text-orange-500" />
+            Frontdesk
+          </div>
+        </h3>
+        <p class="text-sm text-gray-500 mb-4">Configure which role grants access to the Frontdesk scanning interface.</p>
+        <FormControl
+          label="Frontdesk Role"
+          type="select"
+          v-model="form.frontdesk_role"
+          :options="roleOptions"
+          description="Users with only this role will be redirected to the Frontdesk scanning page on login."
+        />
+      </div>
+
       <!-- Save Button -->
       <div class="flex justify-end">
         <Button @click="saveSettings" variant="solid" :loading="saving">Save Settings</Button>
@@ -228,6 +246,7 @@ const form = ref({
   twilio_template_qr_checkin: '',
   twilio_template_thank_you: '',
   google_client_id: '',
+  frontdesk_role: '',
 })
 
 const currencyOptions = [
@@ -238,17 +257,25 @@ const currencyOptions = [
   { label: 'EUR (Euro)', value: 'EUR' },
 ]
 
+const roles = ref([])
+
 const eventTypeOptions = computed(() => {
   return [{ label: 'None', value: '' }, ...(eventTypes.value || []).map(t => ({ label: t.event_type_name, value: t.event_type_name }))]
 })
 
+const roleOptions = computed(() => {
+  return [{ label: 'None', value: '' }, ...roles.value.map(r => ({ label: r.name, value: r.name }))]
+})
+
 onMounted(async () => {
   try {
-    const [settings, types] = await Promise.all([
+    const [settings, types, roleList] = await Promise.all([
       frappeRequest({ url: 'invite.invite.doctype.event_settings.event_settings.get_event_settings' }),
       frappeRequest({ url: 'frappe.client.get_list', params: { doctype: 'Event Type', fields: ['event_type_name'] } }),
+      frappeRequest({ url: 'frappe.client.get_list', params: { doctype: 'Role', fields: ['name'], limit_page_length: 500 } }),
     ])
     eventTypes.value = types || []
+    roles.value = roleList || []
     if (settings) {
       form.value = {
         default_currency: settings.default_currency || 'TZS',
@@ -273,6 +300,7 @@ onMounted(async () => {
         twilio_template_qr_checkin: settings.twilio_template_qr_checkin || '',
         twilio_template_thank_you: settings.twilio_template_thank_you || '',
         google_client_id: settings.google_client_id || '',
+        frontdesk_role: settings.frontdesk_role || '',
       }
     }
   } catch (e) {
@@ -323,6 +351,11 @@ async function testTwilioConnection() {
 async function fetchContentTemplates() {
   fetchingTemplates.value = true
   try {
+    // Save settings first so backend uses latest credentials
+    await frappeRequest({
+      url: 'invite.invite.doctype.event_settings.event_settings.save_event_settings',
+      params: form.value,
+    })
     const result = await frappeRequest({
       url: 'invite.api.twilio.list_content_templates',
     })

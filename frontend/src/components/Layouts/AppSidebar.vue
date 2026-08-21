@@ -74,12 +74,13 @@
 </template>
 
 <script setup>
-import { ref, inject, provide } from 'vue'
+import { ref, inject, provide, computed, onMounted } from 'vue'
 import { FeatherIcon, Badge, Dialog, Button } from 'frappe-ui'
 import SidebarLink from '@/components/SidebarLink.vue'
 import UserDropdown from '@/components/UserDropdown.vue'
 import Notifications from '@/components/Notifications.vue'
 import { showAboutModal } from '@/composables/settings'
+import { useRoleInfo } from '@/composables/roles'
 import {
   unreadNotificationsCount,
   toggle as toggleNotificationPanel,
@@ -90,11 +91,26 @@ const isSidebarCollapsed = inject('isSidebarCollapsed', ref(false))
 // Re-provide to children (SidebarLink, UserDropdown)
 provide('isSidebarCollapsed', isSidebarCollapsed)
 
-const navItems = [
+const { getRoleInfo } = useRoleInfo()
+const isFrontdeskOnly = ref(false)
+
+onMounted(async () => {
+  const info = await getRoleInfo()
+  isFrontdeskOnly.value = info.is_frontdesk_only
+})
+
+const allNavItems = [
   { label: 'Dashboard', icon: 'home', to: 'Dashboard' },
   { label: 'Events', icon: 'calendar', to: 'Events' },
-  { label: 'Frontdesk', icon: 'camera', to: 'Frontdesk' },
-  { label: 'Audit Log', icon: 'file-text', to: 'GlobalAuditLog' },
+  { label: 'Frontdesk', icon: 'camera', to: 'Frontdesk', frontdeskOnly: true },
+  { label: 'Audit Log', icon: 'file-text', to: 'GlobalAuditLog', frontdeskOnly: true },
   { label: 'Settings', icon: 'settings', to: 'AppSettings' },
 ]
+
+const navItems = computed(() => {
+  if (isFrontdeskOnly.value) {
+    return allNavItems.filter(item => item.frontdeskOnly)
+  }
+  return allNavItems.filter(item => !item.frontdeskOnly)
+})
 </script>

@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { sessionStore } from '@/stores/session'
-import { frappeRequest } from '@/utils/api'
+import { useRoleInfo } from '@/composables/roles'
 
 // Public routes that don't require authentication
 const publicRoutes = [
@@ -110,17 +110,7 @@ let router = createRouter({
 // Public route names that don't require authentication
 const publicRouteNames = publicRoutes.map(r => r.name)
 
-let _roleInfoCache = null
-
-async function getRoleInfo() {
-  if (_roleInfoCache) return _roleInfoCache
-  try {
-    _roleInfoCache = await frappeRequest({ url: 'invite.api.session.get_user_role_info' })
-  } catch (e) {
-    _roleInfoCache = { is_frontdesk_only: false }
-  }
-  return _roleInfoCache
-}
+const { getRoleInfo } = useRoleInfo()
 
 router.beforeEach(async (to, from, next) => {
   const { isLoggedIn } = sessionStore()
@@ -147,8 +137,8 @@ router.beforeEach(async (to, from, next) => {
     return
   }
 
-  // Frontdesk-only users should only access Frontdesk page
-  if (to.name !== 'Frontdesk' && to.name !== 'Invalid Page') {
+  // Frontdesk-only users should only access Frontdesk and Audit Log pages
+  if (to.name !== 'Frontdesk' && to.name !== 'GlobalAuditLog' && to.name !== 'Invalid Page') {
     const roleInfo = await getRoleInfo()
     if (roleInfo.is_frontdesk_only) {
       next({ name: 'Frontdesk' })

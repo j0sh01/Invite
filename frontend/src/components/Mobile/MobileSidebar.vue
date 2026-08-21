@@ -68,6 +68,7 @@
 </template>
 
 <script setup>
+import { ref, computed, onMounted } from 'vue'
 import {
   TransitionRoot,
   TransitionChild,
@@ -77,14 +78,30 @@ import { FeatherIcon } from 'frappe-ui'
 import SidebarLink from '@/components/SidebarLink.vue'
 import UserDropdown from '@/components/UserDropdown.vue'
 import { mobileSidebarOpened as sidebarOpened } from '@/composables/settings'
+import { useRoleInfo } from '@/composables/roles'
 
-const navItems = [
+const { getRoleInfo } = useRoleInfo()
+const isFrontdeskOnly = ref(false)
+
+onMounted(async () => {
+  const info = await getRoleInfo()
+  isFrontdeskOnly.value = info.is_frontdesk_only
+})
+
+const allNavItems = [
   { label: 'Dashboard', icon: 'home', to: 'Dashboard' },
   { label: 'Events', icon: 'calendar', to: 'Events' },
-  { label: 'Frontdesk', icon: 'camera', to: 'Frontdesk' },
-  { label: 'Audit Log', icon: 'file-text', to: 'GlobalAuditLog' },
+  { label: 'Frontdesk', icon: 'camera', to: 'Frontdesk', frontdeskOnly: true },
+  { label: 'Audit Log', icon: 'file-text', to: 'GlobalAuditLog', frontdeskOnly: true },
   { label: 'Settings', icon: 'settings', to: 'AppSettings' },
 ]
+
+const navItems = computed(() => {
+  if (isFrontdeskOnly.value) {
+    return allNavItems.filter(item => item.frontdeskOnly)
+  }
+  return allNavItems.filter(item => !item.frontdeskOnly)
+})
 
 function toggleNotifications() {
   // Simple notification toggle - can be enhanced later
