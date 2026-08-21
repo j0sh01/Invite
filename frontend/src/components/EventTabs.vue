@@ -34,8 +34,8 @@ const eventTabs = [
   { label: 'Overview', icon: 'eye', route: '' },
   { label: 'Guests', icon: 'users', route: '/guests' },
   { label: 'Invitations', icon: 'mail', route: '/invitations' },
-  { label: 'Contributions', icon: 'dollar-sign', route: '/contributions' },
   { label: 'Check-In', icon: 'camera', route: '/checkin' },
+  { label: 'Audit Log', icon: 'file-text', route: '/audit-log' },
   { label: 'Reports', icon: 'bar-chart-2', route: '/reports' },
   { label: 'Settings', icon: 'settings', route: '/settings' },
 ]

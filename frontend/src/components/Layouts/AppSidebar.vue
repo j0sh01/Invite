@@ -53,26 +53,6 @@
     <Notifications />
   </div>
 
-  <!-- Settings Modal -->
-  <Dialog :options="{ title: 'Settings', size: 'lg' }" v-model="showSettings">
-    <template #body-content>
-      <div class="space-y-4 py-2">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <FormControl label="Default Currency" type="select" v-model="settingsForm.default_currency" :options="currencyOptions" />
-          <FormControl label="Default Event Type" type="select" v-model="settingsForm.default_event_type" :options="eventTypeOptions" />
-        </div>
-        <FormControl label="Default Reminder Days Before" type="number" v-model="settingsForm.default_reminder_days" />
-        <hr class="my-2" />
-        <FormControl label="App Name" v-model="settingsForm.app_name" />
-        <FormControl label="Default Invitation Message" type="textarea" v-model="settingsForm.default_invitation_message" />
-        <FormControl label="Default Thank You Template" type="textarea" v-model="settingsForm.default_thank_you_template" />
-      </div>
-    </template>
-    <template #actions>
-      <Button @click="showSettings = false" variant="ghost">Cancel</Button>
-      <Button @click="saveSettings" variant="solid" :loading="savingSettings">Save</Button>
-    </template>
-  </Dialog>
 
   <!-- About Modal -->
   <Dialog :options="{ title: 'About Invite' }" v-model="showAboutModal">
@@ -94,13 +74,12 @@
 </template>
 
 <script setup>
-import { ref, watch, computed, inject, provide } from 'vue'
-import { FeatherIcon, Badge, Dialog, FormControl, Button } from 'frappe-ui'
-import { frappeRequest } from '@/utils/api'
+import { ref, inject, provide } from 'vue'
+import { FeatherIcon, Badge, Dialog, Button } from 'frappe-ui'
 import SidebarLink from '@/components/SidebarLink.vue'
 import UserDropdown from '@/components/UserDropdown.vue'
 import Notifications from '@/components/Notifications.vue'
-import { showAboutModal, showSettings } from '@/composables/settings'
+import { showAboutModal } from '@/composables/settings'
 import {
   unreadNotificationsCount,
   toggle as toggleNotificationPanel,
@@ -114,75 +93,8 @@ provide('isSidebarCollapsed', isSidebarCollapsed)
 const navItems = [
   { label: 'Dashboard', icon: 'home', to: 'Dashboard' },
   { label: 'Events', icon: 'calendar', to: 'Events' },
-  { label: 'Committee', icon: 'users', to: 'CommitteeMembers' },
+  { label: 'Frontdesk', icon: 'camera', to: 'Frontdesk' },
+  { label: 'Audit Log', icon: 'file-text', to: 'GlobalAuditLog' },
+  { label: 'Settings', icon: 'settings', to: 'AppSettings' },
 ]
-
-// Settings form
-const savingSettings = ref(false)
-const eventTypesList = ref([])
-const settingsForm = ref({
-  default_currency: 'TZS',
-  default_event_type: '',
-  default_reminder_days: 3,
-  app_name: 'Invite',
-  default_invitation_message: '',
-  default_thank_you_template: '',
-})
-
-const eventTypeOptions = computed(() => {
-  return [{ label: 'None', value: '' }, ...(eventTypesList.value || []).map(t => ({ label: t.event_type_name, value: t.event_type_name }))]
-})
-
-const currencyOptions = [
-  { label: 'TZS (Tanzanian Shilling)', value: 'TZS' },
-  { label: 'USD (US Dollar)', value: 'USD' },
-  { label: 'KES (Kenyan Shilling)', value: 'KES' },
-  { label: 'UGX (Ugandan Shilling)', value: 'UGX' },
-]
-
-// Load settings and event types when dialog opens
-watch(showSettings, async (val) => {
-  if (val) {
-    try {
-      const [settings, types] = await Promise.all([
-        frappeRequest({ url: 'invite.invite.doctype.event_settings.event_settings.get_event_settings' }),
-        frappeRequest({ url: 'frappe.client.get_list', params: { doctype: 'Event Type', fields: ['event_type_name'] } }).catch(() => []),
-      ])
-      eventTypesList.value = types || []
-      if (settings) {
-        settingsForm.value = {
-          default_currency: settings.default_currency || 'TZS',
-          default_event_type: settings.default_event_type || '',
-          default_reminder_days: settings.default_reminder_days || 3,
-          app_name: settings.app_name || 'Invite',
-          default_invitation_message: settings.default_invitation_message || '',
-          default_thank_you_template: settings.default_thank_you_template || '',
-        }
-      }
-    } catch (e) {
-      console.error('Failed to load settings:', e)
-    }
-  }
-})
-
-async function saveSettings() {
-  savingSettings.value = true
-  try {
-    await frappeRequest({
-      url: 'frappe.client.save',
-      params: {
-        doc: JSON.stringify({
-          doctype: 'Event Settings',
-          name: 'Event Settings',
-          ...settingsForm.value,
-        }),
-      },
-    })
-    showSettings.value = false
-  } catch (e) {
-    console.error('Failed to save settings:', e)
-  } finally {
-    savingSettings.value = false
-  }
-}
 </script>

@@ -1,7 +1,7 @@
 app_name = "invite"
 app_title = "Invite"
 app_publisher = "Joshua Michael"
-app_description = "A complete event management solution for organizing guests, invitations, contributions, and QR-based check-in for community ceremonies and special events."
+app_description = "A minimal digital invitation system for events, guests, RSVPs, and QR-based check-in."
 app_email = "joshuajmichael255@gmail.com"
 app_license = "mit"
 
@@ -19,6 +19,8 @@ add_to_apps_screen = [
 # Home Pages
 website_route_rules = [
 	{"from_route": "/invite/<path:app_path>", "to_route": "invite"},
+	{"from_route": "/rsvp", "to_route": "rsvp"},
+	{"from_route": "/event/<path:event_name>", "to_route": "public_event"},
 ]
 
 # Installation
@@ -40,9 +42,7 @@ doc_events = {
 	"RSVP": {
 		"on_update": ["invite.api.rsvp.on_update"],
 	},
-	"Contribution": {
-		"validate": ["invite.api.contribution.validate"],
-	},
+
 }
 
 # Scheduled Tasks
@@ -50,7 +50,6 @@ scheduler_events = {
 	"daily": [
 		"invite.tasks.send_reminder_notifications",
 		"invite.tasks.send_thank_you_messages",
-		"invite.tasks.send_contribution_reminders",
 	],
 	"hourly": [
 		"invite.tasks.process_pending_invitations",

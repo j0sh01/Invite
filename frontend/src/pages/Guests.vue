@@ -2,11 +2,12 @@
   <div class="max-w-7xl mx-auto">
     <div class="flex items-center justify-between mb-6">
       <div>
-        <h1 class="text-2xl font-semibold text-gray-900">Guests</h1>
+        <h1 class="text-xl sm:text-2xl font-semibold text-gray-900">Guests</h1>
         <p class="text-sm text-gray-500 mt-1">{{ totalGuests }} guests for this event</p>
       </div>
       <div class="flex gap-2">
-        <Button @click="showImportModal = true" variant="ghost" size="sm" iconLeft="upload" :label="__('Import CSV')" />
+        <Button @click="showImportModal = true" variant="ghost" size="sm" iconLeft="upload" :label="__('Import')" class="hidden sm:inline-flex" />
+        <Button @click="showImportModal = true" variant="ghost" size="sm" iconLeft="upload" class="sm:hidden" />
         <Button @click="showAddModal = true" variant="solid" size="sm" iconLeft="plus" :label="__('Add Guest')" />
       </div>
     </div>
@@ -15,105 +16,108 @@
     <EventTabs :eventId="props.eventId" />
 
     <!-- Search & Filters -->
-    <div class="flex gap-4 mb-4">
+    <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4">
       <Input
         v-model="searchQuery"
         placeholder="Search guests..."
         class="flex-1"
         @input="searchGuests"
       />
-      <FormControl type="select" v-model="categoryFilter" :options="categoryOptions" class="w-40" placeholder="Category" />
-      <FormControl type="select" v-model="rsvpFilter" :options="rsvpOptions" class="w-40" placeholder="RSVP Status" />
+      <div class="flex gap-3">
+        <FormControl type="select" v-model="categoryFilter" :options="categoryOptions" class="w-full sm:w-40" placeholder="Category" />
+        <FormControl type="select" v-model="rsvpFilter" :options="rsvpOptions" class="w-full sm:w-40" placeholder="RSVP Status" />
+      </div>
     </div>
 
-    <!-- Guests Table -->
+    <!-- Guests Table (responsive) -->
     <div class="bg-white rounded-lg border overflow-hidden">
-      <table class="w-full">
-        <thead class="bg-gray-50 border-b">
-          <tr>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">RSVP</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contribution</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">QR</th>
-            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y">
-          <tr v-for="guest in filteredGuests" :key="guest.name" class="hover:bg-gray-50">
-            <td class="px-4 py-3">
-              <p class="text-sm font-medium text-gray-900">{{ guest.full_name }}</p>
-            </td>
-            <td class="px-4 py-3">
-              <span class="text-xs px-2 py-1 rounded-full" :class="guestTypeBadge(guest.guest_type)">
-                {{ guest.guest_type || 'Individual' }}
-              </span>
-            </td>
-            <td class="px-4 py-3">
-              <p class="text-sm text-gray-600">{{ guest.mobile_no || '-' }}</p>
-              <p class="text-xs text-gray-400">{{ guest.email || '' }}</p>
-            </td>
-            <td class="px-4 py-3">
-              <span class="text-sm text-gray-600">{{ guest.category || '-' }}</span>
-            </td>
-            <td class="px-4 py-3">
-              <span :class="rsvpBadgeClass(guest.rsvp_status)" class="text-xs px-2 py-1 rounded-full">
-                {{ guest.rsvp_status || 'Pending' }}
-              </span>
-            </td>
-            <td class="px-4 py-3">
-              <p class="text-sm text-gray-900">{{ formatCurrency(guest.paid_amount) }}</p>
-              <p v-if="guest.outstanding_amount" class="text-xs text-red-500">
-                {{ formatCurrency(guest.outstanding_amount) }} outstanding
-              </p>
-            </td>
-            <td class="px-4 py-3">
-              <div class="flex items-center gap-1">
-                <FeatherIcon :name="guest.checked_in ? 'check-circle' : 'circle'" 
-                  :class="guest.checked_in ? 'text-green-500' : 'text-gray-300'" class="h-4 w-4" />
-                <span class="text-xs text-gray-500">{{ guest.checked_in ? 'Checked in' : 'Not checked in' }}</span>
-              </div>
-            </td>
-            <td class="px-4 py-3 text-center">
-              <button
-                @click="showGuestQR(guest)"
-                class="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
-                :title="__('View QR Code')"
-              >
-                <FeatherIcon name="smartphone" class="h-4 w-4 text-gray-500" />
-              </button>
-            </td>
-            <td class="px-4 py-3 text-right">
-              <Button @click="editGuest(guest)" variant="ghost" class="text-xs">Edit</Button>
-            </td>
-          </tr>
-          <tr v-if="!filteredGuests.length">
-            <td colspan="9" class="px-4 py-12 text-center text-gray-500 text-sm">No guests found</td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[800px]">
+          <thead class="bg-gray-50 border-b">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Category</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">Attendees</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">RSVP</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase hidden sm:table-cell">QR</th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y">
+            <tr v-for="guest in filteredGuests" :key="guest.name" class="hover:bg-gray-50">
+              <td class="px-4 py-3">
+                <p class="text-sm font-medium text-gray-900">{{ guest.full_name }}</p>
+                <p v-if="guest.plus_one && guest.plus_one_name" class="text-xs text-gray-400">+1: {{ guest.plus_one_name }}</p>
+              </td>
+              <td class="px-4 py-3">
+                <p class="text-sm text-gray-600">{{ guest.mobile_no || guest.phone || '-' }}</p>
+                <p class="text-xs text-gray-400">{{ guest.email || '' }}</p>
+              </td>
+              <td class="px-4 py-3 hidden md:table-cell">
+                <span class="text-sm text-gray-600">{{ guest.category || '-' }}</span>
+              </td>
+              <td class="px-4 py-3 hidden lg:table-cell">
+                <span class="text-sm text-gray-600">{{ guest.number_of_attendees || 1 }}</span>
+              </td>
+              <td class="px-4 py-3">
+                <span :class="rsvpBadgeClass(guest.rsvp_status)" class="text-xs px-2 py-1 rounded-full">
+                  {{ guest.rsvp_status || 'Pending' }}
+                </span>
+              </td>
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-1">
+                  <FeatherIcon :name="guest.checked_in ? 'check-circle' : 'circle'" 
+                    :class="guest.checked_in ? 'text-green-500' : 'text-gray-300'" class="h-4 w-4" />
+                  <span class="text-xs text-gray-500 hidden sm:inline">{{ guest.checked_in ? 'Checked in' : 'Not checked in' }}</span>
+                </div>
+              </td>
+              <td class="px-4 py-3 text-center hidden sm:table-cell">
+                <button
+                  @click="showGuestQR(guest)"
+                  class="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                  :title="__('View QR Code')"
+                >
+                  <FeatherIcon name="smartphone" class="h-4 w-4 text-gray-500" />
+                </button>
+              </td>
+              <td class="px-4 py-3 text-right">
+                <Button @click="editGuest(guest)" variant="ghost" class="text-xs">Edit</Button>
+              </td>
+            </tr>
+            <tr v-if="!filteredGuests.length">
+              <td colspan="10" class="px-4 py-12 text-center text-gray-500 text-sm">No guests found</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Add Guest Modal -->
-    <Dialog :options="{ title: 'Add Guest' }" v-model="showAddModal">
+    <Dialog :options="{ title: 'Add Guest', size: 'lg' }" v-model="showAddModal">
       <template #body-content>
         <div class="space-y-4">
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormControl label="First Name" v-model="newGuest.first_name" required />
             <FormControl label="Last Name" v-model="newGuest.last_name" />
           </div>
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormControl label="Email" v-model="newGuest.email" />
             <FormControl label="Mobile No" v-model="newGuest.mobile_no" />
           </div>
-          <div class="grid grid-cols-2 gap-4">
-            <FormControl label="Category" type="select" v-model="newGuest.category" :options="categoryOptions" />
-            <FormControl label="Guest Type" type="select" v-model="newGuest.guest_type" :options="guestTypeOptions" />
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormControl label="Phone" v-model="newGuest.phone" />
+            <FormControl label="Number of Attendees" type="number" v-model="newGuest.number_of_attendees" />
           </div>
-          <FormControl label="Notes" type="textarea" v-model="newGuest.notes" />
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormControl label="Category" type="select" v-model="newGuest.category" :options="categoryOptionsForEdit" />
+            <div></div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormControl label="Plus One" type="checkbox" v-model="newGuest.plus_one" />
+            <FormControl v-if="newGuest.plus_one" label="Plus One Name" v-model="newGuest.plus_one_name" />
+          </div>
         </div>
       </template>
       <template #actions>
@@ -123,23 +127,30 @@
     </Dialog>
 
     <!-- Edit Guest Modal -->
-    <Dialog :options="{ title: 'Edit Guest' }" v-model="showEditModal">
+    <Dialog :options="{ title: 'Edit Guest', size: 'lg' }" v-model="showEditModal">
       <template #body-content>
         <div class="space-y-4">
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormControl label="First Name" v-model="editGuestForm.first_name" required />
             <FormControl label="Last Name" v-model="editGuestForm.last_name" />
           </div>
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormControl label="Email" v-model="editGuestForm.email" />
             <FormControl label="Mobile No" v-model="editGuestForm.mobile_no" />
           </div>
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormControl label="Phone" v-model="editGuestForm.phone" />
+            <FormControl label="Number of Attendees" type="number" v-model="editGuestForm.number_of_attendees" />
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormControl label="Category" type="select" v-model="editGuestForm.category" :options="categoryOptionsForEdit" />
-            <FormControl label="Guest Type" type="select" v-model="editGuestForm.guest_type" :options="guestTypeOptions" />
+            <div></div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormControl label="Plus One" type="checkbox" v-model="editGuestForm.plus_one" />
+            <FormControl v-if="editGuestForm.plus_one" label="Plus One Name" v-model="editGuestForm.plus_one_name" />
           </div>
           <FormControl label="RSVP Status" type="select" v-model="editGuestForm.rsvp_status" :options="rsvpStatusOptions" />
-          <FormControl label="Notes" type="textarea" v-model="editGuestForm.notes" />
         </div>
       </template>
       <template #actions>
@@ -149,7 +160,7 @@
     </Dialog>
 
     <!-- Import Modal -->
-    <Dialog :options="{ title: 'Import Guests', size: 'lg' }" v-model="showImportModal">
+    <Dialog :options="{ title: 'Import Guests' }" v-model="showImportModal">
       <template #body-content>
         <div class="space-y-5">
           <!-- Step 1: Download Template -->
@@ -219,7 +230,7 @@
     </Dialog>
 
     <!-- QR Code Modal -->
-    <Dialog :options="{ title: selectedGuest?.full_name || 'QR Code', size: 'sm' }" v-model="showQRModal">
+    <Dialog :options="{ title: selectedGuest?.full_name || 'QR Code' }" v-model="showQRModal">
       <template #body-content>
         <div class="py-4 text-center space-y-4">
           <div class="bg-white rounded-lg border p-4 inline-block mx-auto">
@@ -236,13 +247,10 @@
           <div v-if="selectedGuest" class="text-sm text-gray-600">
             <p class="font-medium text-gray-900">{{ selectedGuest.full_name }}</p>
             <p class="text-xs mt-1">
-              {{ selectedGuest.guest_type || 'Individual' }}
-              <span class="mx-1">·</span>
               Code: {{ selectedGuest.invite_code }}
             </p>
             <p class="text-xs text-gray-400 mt-1">
-              Allowed scans:
-              {{ selectedGuest.guest_type === 'Couple' ? '2' : selectedGuest.guest_type === 'Family' ? (selectedGuest.number_of_attendees || '1') : '1' }}
+              Attendees: {{ selectedGuest.number_of_attendees || 1 }}
             </p>
           </div>
         </div>
@@ -274,15 +282,18 @@ const adding = ref(false)
 const updating = ref(false)
 const importing = ref(false)
 const categories = ref([])
+const rsvpStatuses = ref([])
 
 const newGuest = ref({
   first_name: '',
   last_name: '',
   email: '',
   mobile_no: '',
+  phone: '',
   category: '',
-  guest_type: 'Individual',
-  notes: '',
+  plus_one: 0,
+  plus_one_name: '',
+  number_of_attendees: 1,
 })
 
 const editGuestForm = ref({
@@ -290,10 +301,12 @@ const editGuestForm = ref({
   last_name: '',
   email: '',
   mobile_no: '',
+  phone: '',
   category: '',
-  guest_type: 'Individual',
+  plus_one: 0,
+  plus_one_name: '',
+  number_of_attendees: 1,
   rsvp_status: '',
-  notes: '',
 })
 
 const editingGuestName = ref(null)
@@ -325,13 +338,6 @@ const categoryOptions = computed(() => {
 const rsvpOptions = computed(() => {
   return [{ label: 'All RSVPs', value: '' }, ...(rsvpStatuses.value || []).map(s => ({ label: s.status, value: s.status }))]
 })
-
-const guestTypeOptions = [
-  { label: 'Individual', value: 'Individual' },
-  { label: 'Couple', value: 'Couple' },
-  { label: 'Family', value: 'Family' },
-  { label: 'Group', value: 'Group' },
-]
 
 const filteredGuests = computed(() => {
   let result = guests.value
@@ -400,7 +406,7 @@ async function addGuest() {
       params: { data: JSON.stringify({ ...newGuest.value, event: props.eventId }) },
     })
     showAddModal.value = false
-    newGuest.value = { first_name: '', last_name: '', email: '', mobile_no: '', category: '', guest_type: 'Individual', notes: '' }
+    newGuest.value = { first_name: '', last_name: '', email: '', mobile_no: '', phone: '', category: '', plus_one: 0, plus_one_name: '', number_of_attendees: 1 }
     await loadGuests()
   } catch (e) {
     console.error('Failed to add guest:', e)
@@ -535,15 +541,6 @@ async function generateGuestQR() {
   }
 }
 
-function guestTypeBadge(type) {
-  const classes = {
-    'Individual': 'bg-gray-50 text-gray-600',
-    'Couple': 'bg-pink-50 text-pink-700',
-    'Family': 'bg-purple-50 text-purple-700',
-    'Group': 'bg-blue-50 text-blue-700',
-  }
-  return classes[type] || 'bg-gray-50 text-gray-600'
-}
 
 function editGuest(guest) {
   editingGuestName.value = guest.name
@@ -552,10 +549,12 @@ function editGuest(guest) {
     last_name: guest.last_name || '',
     email: guest.email || '',
     mobile_no: guest.mobile_no || '',
+    phone: guest.phone || '',
     category: guest.category || '',
-    guest_type: guest.guest_type || 'Individual',
+    plus_one: guest.plus_one || 0,
+    plus_one_name: guest.plus_one_name || '',
+    number_of_attendees: guest.number_of_attendees || 1,
     rsvp_status: guest.rsvp_status || '',
-    notes: guest.notes || '',
   }
   showEditModal.value = true
 }

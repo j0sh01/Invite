@@ -1,0 +1,148 @@
+{
+ "actions": [],
+ "autoname": "format:IAL-{YYYY}-{MM}-{DD}-{#####}",
+ "creation": "2024-07-20 10:00:00.000000",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "event",
+  "guest",
+  "guest_name",
+  "action_type",
+  "action_category",
+  "subject",
+  "details",
+  "reference_doctype",
+  "reference_name",
+  "performed_by",
+  "ip_address",
+  "extra_data"
+ ],
+ "fields": [
+  {
+   "fieldname": "event",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Event",
+   "options": "Event",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "guest",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Guest",
+   "options": "Guest",
+   "search_index": 1
+  },
+  {
+   "fieldname": "guest_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Guest Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "action_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Action Type",
+   "options": "\nGuest Created\nGuest Updated\nGuest Deleted\nGuest Imported\nInvitation Created\nInvitation Sent\nInvitation Failed\nInvitation Card Generated\nQR Code Generated\nRSVP Submitted\nRSVP Updated\nCheck-In (QR Scan)\nCheck-In (Manual)\nCheck-In (Invite Code)\nDuplicate Scan\nReminder Sent\nThank You Sent\nCard Downloaded\nFrontdesk Scan Started\nEvent Updated",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "action_category",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Category",
+   "options": "\nGuest Management\nInvitation\nCheck-In\nRSVP\nCommunication\nCard\nFrontdesk\nSystem",
+   "reqd": 1
+  },
+  {
+   "fieldname": "subject",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Subject",
+   "reqd": 1
+  },
+  {
+   "fieldname": "details",
+   "fieldtype": "Text Editor",
+   "label": "Details"
+  },
+  {
+   "fieldname": "reference_doctype",
+   "fieldtype": "Data",
+   "label": "Reference DocType"
+  },
+  {
+   "fieldname": "reference_name",
+   "fieldtype": "Data",
+   "label": "Reference Name"
+  },
+  {
+   "fieldname": "performed_by",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Performed By",
+   "options": "User",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "ip_address",
+   "fieldtype": "Data",
+   "label": "IP Address",
+   "read_only": 1
+  },
+  {
+   "fieldname": "extra_data",
+   "fieldtype": "Code",
+   "label": "Extra Data (JSON)",
+   "options": "JSON"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-07-20 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Invite",
+ "name": "Invite Activity Log",
+ "naming_rule": "By script",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Event Manager",
+   "share": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "guest_name,subject,action_type",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "subject",
+ "track_changes": 1
+}

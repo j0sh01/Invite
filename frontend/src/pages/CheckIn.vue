@@ -2,7 +2,7 @@
   <div class="max-w-7xl mx-auto">
     <div class="flex items-center justify-between mb-6">
       <div>
-        <h1 class="text-2xl font-semibold text-gray-900">Check-In</h1>
+        <h1 class="text-xl sm:text-2xl font-semibold text-gray-900">Check-In</h1>
         <p class="text-sm text-gray-500 mt-1">{{ stats.unique_checkins || 0 }} / {{ stats.total_guests || 0 }} guests checked in</p>
       </div>
     </div>
@@ -11,7 +11,7 @@
     <EventTabs :eventId="props.eventId" />
 
     <!-- Stats -->
-    <div class="grid grid-cols-4 gap-4 mb-6">
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
       <div class="bg-white rounded-lg border p-4 text-center">
         <p class="text-lg font-semibold text-gray-900">{{ stats.total_guests || 0 }}</p>
         <p class="text-xs text-gray-500">Total Guests</p>
@@ -136,17 +136,18 @@
         <h3 class="text-base font-medium text-gray-900">Recent Check-Ins</h3>
       </div>
       <div class="divide-y">
-        <div v-for="ci in recentCheckins" :key="ci.name" class="px-6 py-3 flex items-center justify-between text-sm">
+        <div v-for="ci in recentCheckins" :key="ci.name" class="px-4 sm:px-6 py-3 flex items-center justify-between text-sm">
           <div class="flex items-center gap-3">
             <FeatherIcon :name="ci.is_duplicate ? 'alert-circle' : 'check-circle'"
               :class="ci.is_duplicate ? 'text-amber-500' : 'text-green-500'" class="h-5 w-5" />
             <div>
               <p class="text-gray-900">{{ ci.guest_name }}</p>
-              <p class="text-xs text-gray-400">{{ ci.check_in_method }}</p>
+              <p class="text-xs text-gray-400">{{ ci.check_in_method }} · {{ ci.number_of_attendees || 1 }} guest(s)</p>
             </div>
           </div>
           <div class="text-right">
             <p class="text-gray-500">{{ ci.checked_in_at ? formatDateTime(ci.checked_in_at) : '' }}</p>
+            <p v-if="ci.checked_in_by" class="text-xs text-gray-400">by {{ ci.checked_in_by }}</p>
             <p v-if="ci.is_duplicate" class="text-xs text-amber-500">Duplicate scan</p>
           </div>
         </div>

@@ -1,6 +1,6 @@
 <template>
   <div class="max-w-3xl mx-auto">
-    <h1 class="text-2xl font-semibold text-gray-900 mb-6">Event Settings</h1>
+    <h1 class="text-xl sm:text-2xl font-semibold text-gray-900 mb-6">Event Settings</h1>
 
     <!-- Sub-navigation Tabs -->
     <EventTabs :eventId="props.eventId" />
@@ -11,11 +11,11 @@
       <div class="space-y-6">
         <div>
           <h3 class="text-base font-medium text-gray-900 mb-4">Event Details</h3>
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormControl label="Event Name" v-model="form.event_name" required />
             <FormControl label="Event Type" type="select" v-model="form.event_type" :options="eventTypeOptions" />
           </div>
-          <div class="grid grid-cols-2 gap-4 mt-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             <FormControl label="Status" type="select" v-model="form.event_status" :options="eventStatusOptions" />
             <div></div>
           </div>
@@ -23,13 +23,9 @@
 
         <div class="border-t pt-6">
           <h3 class="text-base font-medium text-gray-900 mb-4">Date & Location</h3>
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormControl label="Event Date" type="date" v-model="form.event_date" />
             <FormControl label="Event Time" type="time" v-model="form.event_time" />
-          </div>
-          <div class="grid grid-cols-2 gap-4 mt-4">
-            <FormControl label="End Date" type="date" v-model="form.end_date" />
-            <FormControl label="End Time" type="time" v-model="form.end_time" />
           </div>
           <FormControl label="Venue" v-model="form.venue" class="mt-4" />
           <FormControl label="Address" type="textarea" v-model="form.location_address" class="mt-4" />
@@ -38,7 +34,7 @@
         <div class="border-t pt-6">
           <h3 class="text-base font-medium text-gray-900 mb-4">Organizer</h3>
           <FormControl label="Organizer Name" v-model="form.organizer_name" />
-          <div class="grid grid-cols-2 gap-4 mt-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             <FormControl label="Contact" v-model="form.organizer_contact" />
             <FormControl label="Email" v-model="form.organizer_email" />
           </div>
@@ -47,7 +43,7 @@
 
         <div class="border-t pt-6">
           <h3 class="text-base font-medium text-gray-900 mb-4">Event Image</h3>
-          <div class="flex items-start gap-6">
+          <div class="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
             <div class="flex-shrink-0">
               <div
                 class="w-32 h-32 rounded-lg border bg-gray-50 flex items-center justify-center overflow-hidden cursor-pointer hover:bg-gray-100 transition-colors"
@@ -62,7 +58,7 @@
               <input ref="imageInput" type="file" accept="image/*" class="hidden" @change="handleImageUpload" />
             </div>
             <div class="text-sm text-gray-500">
-              <p>Upload an event image/photo that will appear on invitation cards and communications.</p>
+              <p>Upload an event image/photo for invitation cards and communications.</p>
               <p class="mt-1">Recommended size: 1200x600px</p>
             </div>
           </div>
@@ -70,32 +66,19 @@
 
         <div class="border-t pt-6">
           <h3 class="text-base font-medium text-gray-900 mb-4">Configuration</h3>
-          <div class="grid grid-cols-2 gap-4">
-            <FormControl label="Currency" type="select" v-model="form.currency" :options="currencyOptions" />
-            <FormControl label="Default Contribution Type" type="select" v-model="form.default_contribution_type" :options="contributionTypeOptions" />
-          </div>
-          <div class="flex items-center gap-6 mt-4">
-            <FormControl type="checkbox" label="Allow Partial Payments" v-model="form.allow_partial_payments" />
+          <FormControl label="Currency" type="select" v-model="form.currency" :options="currencyOptions" class="w-full sm:w-48" />
+          <div class="flex flex-wrap items-center gap-4 sm:gap-6 mt-4">
             <FormControl type="checkbox" label="Enable Reminders" v-model="form.enable_reminders" />
             <FormControl type="checkbox" label="Enable Public RSVP" v-model="form.enable_public_rsvp" />
           </div>
-          <div class="grid grid-cols-2 gap-4 mt-4">
-            <FormControl label="Reminder Days Before" type="number" v-model="form.reminder_days_before" />
-            <div><p class="text-xs text-gray-400 mt-8">QR code is always centered on the invitation card.</p></div>
+          <div class="mt-4">
+            <FormControl label="Reminder Days Before" type="number" v-model="form.reminder_days_before" class="w-full sm:w-48" />
           </div>
-        </div>
-
-        <div class="border-t pt-6">
-          <h3 class="text-base font-medium text-gray-900 mb-4">Invitation & Thank You Templates</h3>
-          <FormControl label="Invitation Message" type="textarea" v-model="form.invitation_message" />
-          <p class="text-xs text-gray-400 mt-1 mb-4">Available placeholders: <code>{guest_name}</code>, <code>{event_name}</code>, <code>{event_date}</code>, <code>{venue}</code></p>
-          <FormControl label="Thank You Template" type="textarea" v-model="form.thank_you_template" class="mt-4" />
-          <p class="text-xs text-gray-400 mt-1">Available placeholders: <code>{guest_name}</code>, <code>{event_name}</code></p>
         </div>
 
         <div class="border-t pt-6">
           <h3 class="text-base font-medium text-gray-900 mb-4">Send Communications</h3>
-          <p class="text-sm text-gray-500 mb-4">Manually trigger reminders and communications to guests. Messages are sent to all guests via the selected channel.</p>
+          <p class="text-sm text-gray-500 mb-4">Manually trigger reminders and communications to guests.</p>
           
           <!-- Reminder Results -->
           <div v-if="reminderResult" class="mb-4 rounded-lg p-4" :class="reminderResult.total_failed ? 'bg-amber-50 border border-amber-200' : 'bg-green-50 border border-green-200'">
@@ -129,7 +112,7 @@
             <Button
               @click="triggerReminder(selectedReminderChannel, selectedReminderType)"
               variant="solid"
-              size="md"
+              size="sm"
               :loading="reminderLoading"
               iconLeft="send"
               :label="__('Send')"
@@ -164,11 +147,8 @@ const loading = ref(true)
 const saving = ref(false)
 const eventTypes = ref([])
 const eventStatuses = ref([])
-const contributionTypes = ref([])
-const currencies = ref([])
 const imageInput = ref(null)
 const uploadingImage = ref(false)
-const reminding = ref(false)
 const reminderResult = ref(null)
 const reminderLoading = ref(false)
 const selectedReminderType = ref('event')
@@ -176,13 +156,11 @@ const selectedReminderChannel = ref('WhatsApp')
 
 const reminderTypeOptions = [
   { label: __('Event Reminder'), value: 'event' },
-  { label: __('Contribution Reminder'), value: 'contribution' },
   { label: __('Thank You'), value: 'thank_you' },
 ]
 
 const reminderChannelOptions = [
   { label: __('WhatsApp'), value: 'WhatsApp' },
-  { label: __('SMS'), value: 'SMS' },
   { label: __('Email'), value: 'Email' },
 ]
 
@@ -192,8 +170,6 @@ const form = ref({
   event_status: '',
   event_date: '',
   event_time: '',
-  end_date: '',
-  end_time: '',
   venue: '',
   location_address: '',
   organizer_name: '',
@@ -201,15 +177,10 @@ const form = ref({
   organizer_email: '',
   max_guests: 0,
   currency: 'TZS',
-  default_contribution_type: '',
-  allow_partial_payments: 1,
   enable_reminders: 1,
   enable_public_rsvp: 0,
   reminder_days_before: 3,
   image: '',
-  invitation_message: '',
-  thank_you_template: '',
-  qr_position: 'Center',
   description: '',
 })
 
@@ -219,10 +190,6 @@ const eventTypeOptions = computed(() =>
 
 const eventStatusOptions = computed(() =>
   (eventStatuses.value || []).map(s => ({ label: s.status_name, value: s.status_name }))
-)
-
-const contributionTypeOptions = computed(() =>
-  (contributionTypes.value || []).map(t => ({ label: t.type_name, value: t.type_name }))
 )
 
 const currencyOptions = [
@@ -251,8 +218,6 @@ async function loadEvent() {
         event_status: e.event_status || 'Planning',
         event_date: e.event_date || '',
         event_time: e.event_time || '',
-        end_date: e.end_date || '',
-        end_time: e.end_time || '',
         venue: e.venue || '',
         location_address: e.location_address || '',
         organizer_name: e.organizer_name || '',
@@ -260,15 +225,10 @@ async function loadEvent() {
         organizer_email: e.organizer_email || '',
         max_guests: e.max_guests || 0,
         currency: e.currency || 'TZS',
-        default_contribution_type: e.default_contribution_type || '',
-        allow_partial_payments: e.allow_partial_payments ? 1 : 0,
         enable_reminders: e.enable_reminders ? 1 : 0,
         enable_public_rsvp: e.enable_public_rsvp ? 1 : 0,
         reminder_days_before: e.reminder_days_before || 3,
         image: e.image || '',
-        invitation_message: e.invitation_message || '',
-        thank_you_template: e.thank_you_template || '',
-        qr_position: 'Center',
         description: e.description || '',
       }
     }
@@ -281,16 +241,12 @@ async function loadEvent() {
 
 async function loadOptions() {
   try {
-    const [types, statuses, contTypes, currenciesList] = await Promise.all([
+    const [types, statuses] = await Promise.all([
       frappeRequest({ url: 'frappe.client.get_list', params: { doctype: 'Event Type', fields: ['event_type_name'] } }),
       frappeRequest({ url: 'frappe.client.get_list', params: { doctype: 'Event Status', fields: ['status_name'] } }),
-      frappeRequest({ url: 'frappe.client.get_list', params: { doctype: 'Contribution Type', fields: ['type_name'] } }),
-      frappeRequest({ url: 'frappe.client.get_list', params: { doctype: 'Currency', fields: ['name'], limit: 20 } }),
     ])
     eventTypes.value = types || []
     eventStatuses.value = statuses || []
-    contributionTypes.value = contTypes || []
-    currencies.value = (currenciesList || []).map(c => ({ label: c.name, value: c.name }))
   } catch (e) {
     console.error('Failed to load options:', e)
   }

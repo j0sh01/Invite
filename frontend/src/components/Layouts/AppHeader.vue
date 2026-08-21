@@ -44,7 +44,6 @@ const pageTitle = computed(() => {
     'EventDetail': 'Event Details',
     'Guests': 'Guests',
     'Invitations': 'Invitations',
-    'Contributions': 'Contributions',
     'CheckIn': 'Check-In',
     'Reports': 'Reports',
     'EventSettings': 'Event Settings',

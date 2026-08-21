@@ -14,8 +14,6 @@
   "event_status",
   "event_date",
   "event_time",
-  "end_date",
-  "end_time",
   "venue",
   "location_address",
   "organizer_name",
@@ -26,24 +24,18 @@
   "image",
   "config_tab",
   "currency",
-  "default_contribution_type",
-  "allow_partial_payments",
   "enable_reminders",
   "reminder_days_before",
-  "invitation_message",
-  "thank_you_template",
-  "contribution_reminder_message",
   "qr_position",
   "enable_public_rsvp",
-  "public_rsvp_code",
+  "google_calendar_tab",
+  "google_calendar_event_id",
   "statistics_section",
   "total_guests",
   "total_invited",
   "total_rsvped",
   "total_accepted",
   "total_declined",
-  "total_contributions",
-  "total_contribution_amount",
   "total_checked_in"
  ],
  "fields": [
@@ -88,16 +80,6 @@
    "fieldname": "event_time",
    "fieldtype": "Time",
    "label": "Event Time"
-  },
-  {
-   "fieldname": "end_date",
-   "fieldtype": "Date",
-   "label": "End Date"
-  },
-  {
-   "fieldname": "end_time",
-   "fieldtype": "Time",
-   "label": "End Time"
   },
   {
    "fieldname": "venue",
@@ -154,19 +136,6 @@
    "options": "Currency"
   },
   {
-   "default": "Cash Contribution",
-   "fieldname": "default_contribution_type",
-   "fieldtype": "Link",
-   "label": "Default Contribution Type",
-   "options": "Contribution Type"
-  },
-  {
-   "default": "1",
-   "fieldname": "allow_partial_payments",
-   "fieldtype": "Check",
-   "label": "Allow Partial Payments"
-  },
-  {
    "default": "1",
    "fieldname": "enable_reminders",
    "fieldtype": "Check",
@@ -179,22 +148,7 @@
    "label": "Reminder Days Before"
   },
   {
-   "fieldname": "invitation_message",
-   "fieldtype": "Text Editor",
-   "label": "Invitation Message"
-  },
-  {
-   "fieldname": "thank_you_template",
-   "fieldtype": "Text Editor",
-   "label": "Thank You Message Template"
-  },
-  {
-   "fieldname": "contribution_reminder_message",
-   "fieldtype": "Text Editor",
-   "label": "Contribution Reminder Message"
-  },
-  {
-   "default": "Right",
+   "default": "Center",
    "fieldname": "qr_position",
    "fieldtype": "Select",
    "label": "QR Code Position on Card",
@@ -207,9 +161,16 @@
    "label": "Enable Public RSVP"
   },
   {
-   "fieldname": "public_rsvp_code",
+   "fieldname": "google_calendar_tab",
+   "fieldtype": "Tab Break",
+   "label": "Google Calendar"
+  },
+  {
+   "fieldname": "google_calendar_event_id",
    "fieldtype": "Data",
-   "label": "Public RSVP Code"
+   "label": "Google Calendar Event ID",
+   "read_only": 1,
+   "description": "Synced event ID from Google Calendar"
   },
   {
    "fieldname": "statistics_section",
@@ -248,19 +209,6 @@
    "read_only": 1
   },
   {
-   "fieldname": "total_contributions",
-   "fieldtype": "Int",
-   "label": "Total Contributions",
-   "read_only": 1
-  },
-  {
-   "fieldname": "total_contribution_amount",
-   "fieldtype": "Currency",
-   "label": "Total Contribution Amount",
-   "options": "currency",
-   "read_only": 1
-  },
-  {
    "fieldname": "total_checked_in",
    "fieldtype": "Int",
    "label": "Total Checked In",
@@ -279,11 +227,6 @@
   {
    "group": "Invitations",
    "link_doctype": "Invitation",
-   "link_fieldname": "event"
-  },
-  {
-   "group": "Contributions",
-   "link_doctype": "Contribution",
    "link_fieldname": "event"
   },
   {

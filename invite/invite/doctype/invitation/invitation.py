@@ -48,7 +48,12 @@ class Invitation(Document):
 
 @frappe.whitelist()
 def send_invitations(event, invitation_type="WhatsApp"):
-	"""Send bulk invitations for an event."""
+	"""Send bulk invitations for an event via WhatsApp/Twilio.
+
+	Actually dispatches messages through the configured provider.
+	For Twilio, uses Content API templates if SIDs are configured.
+	Falls back to plain text if no template is available.
+	"""
 	invitations = frappe.get_all(
 		"Invitation",
 		filters={
@@ -60,20 +65,201 @@ def send_invitations(event, invitation_type="WhatsApp"):
 
 	sent = []
 	failed = []
+	settings = frappe.get_single("Event Settings")
+	provider = getattr(settings, "whatsapp_provider", "")
 
 	for inv_name in invitations:
 		try:
 			inv = frappe.get_doc("Invitation", inv_name)
 			inv.delivery_method = invitation_type
-			inv.status = "Sent"
-			inv.sent_at = now()
-			inv.delivery_status = "Sent"
+
+			# Actually send the message
+			if provider == "Twilio" and invitation_type == "WhatsApp":
+				success = _send_twilio_invitation(inv, settings, event)
+			elif provider == "Official WhatsApp API" and invitation_type == "WhatsApp":
+				success = _send_meta_api_invitation(inv, settings, event)
+			else:
+				success = True  # Non-WhatsApp delivery methods (Email/SMS/Manual)
+
+			if success:
+				inv.status = "Sent"
+				inv.sent_at = now()
+				inv.delivery_status = "Sent"
+			else:
+				inv.status = "Failed"
+				inv.delivery_status = "Failed"
+				inv.delivery_error = "Failed to send via configured provider"
+
 			inv.save(ignore_permissions=True)
 			sent.append(inv_name)
 		except Exception as e:
+			try:
+				inv = frappe.get_doc("Invitation", inv_name)
+				inv.status = "Failed"
+				inv.delivery_status = "Failed"
+				inv.delivery_error = str(e)[:500]
+				inv.save(ignore_permissions=True)
+			except Exception:
+				pass
 			failed.append({"invitation": inv_name, "error": str(e)})
 
+	# Audit log
+	if sent:
+		try:
+			from invite.invite.doctype.invite_activity_log.invite_activity_log import log_action
+			log_action(
+				event=event,
+				action_type="Invitation Sent",
+				subject=f"{len(sent)} invitation(s) sent via {invitation_type}",
+				extra_data={"sent": sent[:10], "failed_count": len(failed), "delivery_method": invitation_type},
+			)
+		except Exception:
+			pass
+
+	if failed:
+		try:
+			from invite.invite.doctype.invite_activity_log.invite_activity_log import log_action
+			log_action(
+				event=event,
+				action_type="Invitation Failed",
+				subject=f"{len(failed)} invitation(s) failed to send",
+				extra_data={"failed": failed[:10], "delivery_method": invitation_type},
+			)
+		except Exception:
+			pass
+
+	frappe.db.commit()
 	return {"sent": sent, "failed": failed, "total": len(invitations)}
+
+
+def _send_twilio_invitation(inv, settings, event_name):
+	"""Send a single invitation via Twilio Content API.
+
+	Uses the configured Content SID template. Falls back to plain text
+	if no template SID is configured.
+	"""
+	from invite.api.twilio import send_template_message, send_whatsapp_message, get_template_sids
+
+	contact = inv.recipient_contact or ""
+	if not contact and inv.guest:
+		guest = frappe.get_cached_doc("Guest", inv.guest)
+		contact = guest.mobile_no or ""
+
+	if not contact:
+		return False
+
+	# Get template SID for event invitation
+	tids = get_template_sids()
+	template_sid = tids.get("event_invitation", "")
+
+	if template_sid:
+		# Build template variables
+		base_url = frappe.utils.get_url()
+		rsvp_link = f"{base_url}/rsvp?code={inv.invite_code}"
+		event_doc = frappe.get_doc("Event", event_name)
+		variables = {
+			"1": inv.guest_name or "Guest",
+			"2": event_doc.event_name or "Event",
+			"3": str(event_doc.event_date or ""),
+			"4": event_doc.event_time or "",
+			"5": event_doc.venue or "",
+			"6": rsvp_link,
+		}
+		return send_template_message(contact, template_sid, variables)
+	else:
+		# Fallback: send plain text
+		base_url = frappe.utils.get_url()
+		rsvp_link = f"{base_url}/rsvp?code={inv.invite_code}"
+		event_doc = frappe.get_doc("Event", event_name)
+		message = (
+			f"Dear {inv.guest_name or 'Guest'}, you are invited to "
+			f"{event_doc.event_name} on {event_doc.event_date} at {event_doc.venue}.\n\n"
+			f"Please RSVP here: {rsvp_link}"
+		)
+		return send_whatsapp_message(contact, message)
+
+
+def _send_meta_api_invitation(inv, settings, event_name):
+	"""Send a single invitation via Meta WhatsApp Cloud API."""
+	from invite.api.whatsapp import send_text_message
+
+	contact = inv.recipient_contact or ""
+	if not contact and inv.guest:
+		guest = frappe.get_cached_doc("Guest", inv.guest)
+		contact = guest.mobile_no or ""
+
+	if not contact:
+		return False
+
+	base_url = frappe.utils.get_url()
+	rsvp_link = f"{base_url}/rsvp?code={inv.invite_code}"
+	event_doc = frappe.get_doc("Event", event_name)
+	message = (
+			f"Dear {inv.guest_name or 'Guest'}, you are invited to "
+			f"{event_doc.event_name} on {event_doc.event_date} at {event_doc.venue}.\n\n"
+			f"Please RSVP here: {rsvp_link}"
+		)
+
+	return send_text_message(contact, message)
+
+
+@frappe.whitelist()
+def send_single_invitation(invitation, delivery_method="WhatsApp"):
+	"""Send a single invitation via WhatsApp/Twilio.
+
+	Works for both fresh sends and retries of failed invitations.
+	Clears any previous error before attempting to send.
+	"""
+	inv = frappe.get_doc("Invitation", invitation)
+	settings = frappe.get_single("Event Settings")
+	provider = getattr(settings, "whatsapp_provider", "")
+
+	inv.delivery_method = delivery_method
+
+	# Clear old error on retry
+	if inv.status == "Failed":
+		inv.delivery_error = ""
+		inv.status = "Ready"
+
+	try:
+		if provider == "Twilio" and delivery_method == "WhatsApp":
+			success = _send_twilio_invitation(inv, settings, inv.event)
+		elif provider == "Official WhatsApp API" and delivery_method == "WhatsApp":
+			success = _send_meta_api_invitation(inv, settings, inv.event)
+		else:
+			success = True  # Non-WhatsApp delivery methods
+
+		if success:
+			inv.status = "Sent"
+			inv.sent_at = now()
+			inv.delivery_status = "Sent"
+			inv.delivery_error = ""
+		else:
+			inv.status = "Failed"
+			inv.delivery_status = "Failed"
+			inv.delivery_error = "Failed to send via configured provider"
+
+		inv.save(ignore_permissions=True)
+		frappe.db.commit()
+
+		return {
+			"success": success,
+			"message": f"Invitation sent to {inv.guest_name}" if success else f"Failed to send to {inv.guest_name}",
+			"invitation": inv.name,
+		}
+
+	except Exception as e:
+		inv.status = "Failed"
+		inv.delivery_status = "Failed"
+		inv.delivery_error = str(e)[:500]
+		inv.save(ignore_permissions=True)
+		frappe.db.commit()
+
+		return {
+			"success": False,
+			"message": str(e),
+			"invitation": inv.name,
+		}
 
 
 @frappe.whitelist()
@@ -111,5 +297,20 @@ def generate_qr_code(invitation):
 	file_doc.insert(ignore_permissions=True)
 
 	inv.db_set("qr_code_image", f"/files/{filename}")
+
+	# Audit log
+	try:
+		from invite.invite.doctype.invite_activity_log.invite_activity_log import log_action
+		log_action(
+			event=inv.event,
+			action_type="QR Code Generated",
+			subject=f"QR code generated for {inv.guest_name}",
+			guest=inv.guest,
+			guest_name=inv.guest_name,
+			reference_doctype="Invitation",
+			reference_name=inv.name,
+		)
+	except Exception:
+		pass
 
 	return {"qr_code_url": f"/files/{filename}", "invite_code": inv.invite_code}

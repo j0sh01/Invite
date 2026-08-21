@@ -24,8 +24,8 @@ def generate_invitation_card(invitation):
 	# Validate: event must have an image to generate a card
 	if not event.image:
 		frappe.throw(
-			_("Please upload an Event Image in Event Settings before generating invitation cards."),
-			title=_("Event Image Required")
+			"Please upload an Event Image in Event Settings before generating invitation cards.",
+			title="Event Image Required"
 		)
 
 	# Auto-generate QR code if not present
@@ -46,12 +46,16 @@ def generate_invitation_card(invitation):
 	# Step 2: Generate the QR code page HTML
 	qr_page_html = _build_qr_page_html(event, inv)
 
-	# Step 3: Combine — insert QR styles into <head> and QR page before </body>
+	# Step 3: Build guest name banner HTML
+	guest_banner_html = _build_guest_banner_html(inv)
+
+	# Step 4: Combine — insert styles into <head>, banner at top of body, QR page before </body>
 	qr_styles = _qr_page_styles()
 	combined_html = print_html.replace("</head>", qr_styles + "\n\t</head>")
+	combined_html = combined_html.replace("<body>", "<body>\n" + guest_banner_html)
 	combined_html = combined_html.replace("</body>", qr_page_html + "\n</body>")
 
-	# Step 4: Convert combined HTML to PDF
+	# Step 5: Convert combined HTML to PDF
 	pdf_content = get_pdf(combined_html)
 
 	import os
@@ -75,6 +79,22 @@ def generate_invitation_card(invitation):
 	# Store the card URL on the invitation
 	inv.db_set("personalized_invite_card", f"/files/{filename}")
 
+	# Audit log
+	try:
+		from invite.invite.doctype.invite_activity_log.invite_activity_log import log_action
+		log_action(
+			event=inv.event,
+			action_type="Invitation Card Generated",
+			subject=f"Personalized card generated for {inv.guest_name}",
+			guest=inv.guest,
+			guest_name=inv.guest_name,
+			reference_doctype="Invitation",
+			reference_name=inv.name,
+			extra_data={"invite_code": inv.invite_code, "card_url": f"/files/{filename}"},
+		)
+	except Exception:
+		pass
+
 	return {
 		"card_url": f"/files/{filename}",
 		"invite_code": inv.invite_code,
@@ -91,9 +111,37 @@ def download_invitation_card(invitation):
 
 
 def _qr_page_styles():
-	"""Return CSS styles for the QR code page (appended to Frappe's print format)."""
+	"""Return CSS styles for guest name banner and QR code page."""
 	return """
 	<style>
+		/* -- Guest name banner (inserted at top of page 1) -- */
+		.guest-banner {
+			padding: 28px 32px 22px;
+			text-align: center;
+			border-bottom: 3px solid #e2e8f0;
+			background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+		}
+		.guest-banner .guest-label {
+			font-size: 11px;
+			letter-spacing: 3px;
+			text-transform: uppercase;
+			color: #94a3b8;
+			margin-bottom: 8px;
+		}
+		.guest-banner .guest-name {
+			font-size: 28px;
+			font-weight: 700;
+			color: #1e293b;
+			margin: 0;
+			line-height: 1.3;
+		}
+		.guest-banner .guest-invite-code {
+			font-size: 10px;
+			color: #94a3b8;
+			margin-top: 8px;
+			letter-spacing: 2px;
+			font-family: monospace;
+		}
 		/* -- QR code page (page 2) -- */
 		.qr-page {
 			page-break-before: always;
@@ -135,6 +183,19 @@ def _qr_page_styles():
 	"""
 
 
+def _build_guest_banner_html(inv):
+	"""Build the guest name banner HTML (inserted at top of page 1)."""
+	guest_name = inv.guest_name or "Valued Guest"
+	invite_code = inv.invite_code or ""
+	return f"""
+	<div class="guest-banner">
+		<div class="guest-label">You are cordially invited</div>
+		<div class="guest-name">{guest_name}</div>
+		<div class="guest-invite-code">{invite_code}</div>
+	</div>
+	"""
+
+
 def _build_qr_page_html(event, inv):
 	"""Build only the QR code page HTML (page 2).
 
@@ -168,16 +229,14 @@ def _build_qr_page_html(event, inv):
 @frappe.whitelist()
 def send_reminders(event, channel=None, reminder_type="event"):
 	"""Send reminders for an event via specified channel.
-	
-	channel: "WhatsApp" | "SMS" | "Email" | None (all)
-	reminder_type: "event" | "contribution" | "thank_you"
+
+	channel: "WhatsApp" | "Email" | None (all)
+	reminder_type: "event" | "thank_you"
 	"""
 	event_doc = frappe.get_doc("Event", event)
 
 	if reminder_type == "thank_you":
 		return _send_thank_you_messages(event_doc, channel)
-	elif reminder_type == "contribution":
-		return _send_contribution_reminders(event_doc, channel)
 	else:
 		return _send_event_reminders(event_doc, channel)
 
@@ -187,12 +246,11 @@ def _send_event_reminders(event_doc, channel):
 	guests = frappe.get_all(
 		"Guest",
 		filters={"event": event_doc.name},
-		fields=["name", "full_name", "email", "mobile_no", "guest_type", "invite_code"],
+		fields=["name", "full_name", "email", "mobile_no", "invite_code"],
 	)
 
 	base_url = get_url()
-	# Use getattr for fields that may not exist before migration
-	message = getattr(event_doc, "invitation_message", None) or (
+	message = (
 		"Dear {guest_name}, you are invited to {event_name} on {event_date} at {venue}.\n\n"
 		"Please RSVP here: {rsvp_link}"
 	)
@@ -220,13 +278,9 @@ def _send_event_reminders(event_doc, channel):
 				_send_email(guest.email, f"Reminder: {event_doc.event_name}", personalized, card_path)
 				sent.append({"guest": guest.name, "channel": "Email"})
 
-			if channel in (None, "WhatsApp"):
+			if channel in (None, "WhatsApp") and guest.mobile_no:
 				_send_whatsapp(guest.mobile_no, personalized, card_path, event_name=event_doc.name)
 				sent.append({"guest": guest.name, "channel": "WhatsApp"})
-
-			if channel in (None, "SMS") and guest.mobile_no:
-				_send_sms(guest.mobile_no, personalized, event_name=event_doc.name)
-				sent.append({"guest": guest.name, "channel": "SMS"})
 
 			_log_notification(guest, event_doc, f"Reminder: {event_doc.event_name}")
 
@@ -237,56 +291,18 @@ def _send_event_reminders(event_doc, channel):
 				"Send Reminder"
 			)
 
-	frappe.db.commit()
-	return {"sent": sent, "failed": failed, "total_sent": len(sent), "total_failed": len(failed)}
-
-
-def _send_contribution_reminders(event_doc, channel):
-	"""Send contribution reminders to guests with outstanding amounts.
-	Only sends to guests where outstanding_amount > 0.
-	"""
-	guests = frappe.get_all(
-		"Guest",
-		filters={"event": event_doc.name, "outstanding_amount": [">", 0]},
-		fields=["name", "full_name", "email", "mobile_no", "outstanding_amount"],
-	)
-
-	if not guests:
-		return {"sent": [], "failed": [], "total_sent": 0, "total_failed": 0, "message": "No guests with outstanding contributions."}
-
-	currency = event_doc.currency or "TZS"
-	sent = []
-	failed = []
-
-	for guest in guests:
+	# Audit log for reminders
+	if sent:
 		try:
-			amount_str = f"{currency} {guest.outstanding_amount:,.0f}"
-			msg = (
-				f"Dear {guest.full_name}, this is a friendly reminder that you have an "
-				f"outstanding contribution of {amount_str} for {event_doc.event_name}. "
-				f"Thank you for your generous support!"
+			from invite.invite.doctype.invite_activity_log.invite_activity_log import log_action
+			log_action(
+				event=event_doc.name,
+				action_type="Reminder Sent",
+				subject=f"{len(sent)} reminder(s) sent for {event_doc.event_name}",
+				extra_data={"sent_count": len(sent), "failed_count": len(failed), "channel": channel},
 			)
-
-			if channel in (None, "Email") and guest.email:
-				_send_email(guest.email, f"Contribution Reminder: {event_doc.event_name}", msg)
-				sent.append({"guest": guest.name, "channel": "Email"})
-
-			if channel in (None, "WhatsApp"):
-				_send_whatsapp(guest.mobile_no, msg, event_name=event_doc.name)
-				sent.append({"guest": guest.name, "channel": "WhatsApp"})
-
-			if channel in (None, "SMS") and guest.mobile_no:
-				_send_sms(guest.mobile_no, msg, event_name=event_doc.name)
-				sent.append({"guest": guest.name, "channel": "SMS"})
-
-			_log_notification(guest, event_doc, f"Contribution Reminder: {event_doc.event_name}")
-
-		except Exception as e:
-			failed.append({"guest": guest.name, "error": str(e)})
-			frappe.log_error(
-				f"Contribution reminder failed for {guest.name}: {frappe.get_traceback()}",
-				"Send Reminder"
-			)
+		except Exception:
+			pass
 
 	frappe.db.commit()
 	return {"sent": sent, "failed": failed, "total_sent": len(sent), "total_failed": len(failed)}
@@ -300,7 +316,7 @@ def _send_thank_you_messages(event_doc, channel):
 		fields=["guest", "guest_name"],
 	)
 
-	template = event_doc.thank_you_template or "Dear {guest_name}, thank you for attending {event_name}! We truly appreciate your presence."
+	template = "Dear {guest_name}, thank you for attending {event_name}! We truly appreciate your presence."
 	sent = []
 	failed = []
 
@@ -315,13 +331,9 @@ def _send_thank_you_messages(event_doc, channel):
 				_send_email(guest.email, f"Thank You: {event_doc.event_name}", personalized, event_doc.image)
 				sent.append({"guest": guest.name, "channel": "Email"})
 
-			if channel in (None, "WhatsApp"):
+			if channel in (None, "WhatsApp") and guest.mobile_no:
 				_send_whatsapp(guest.mobile_no, personalized, event_doc.image, event_name=event_doc.name)
 				sent.append({"guest": guest.name, "channel": "WhatsApp"})
-
-			if channel in (None, "SMS") and guest.mobile_no:
-				_send_sms(guest.mobile_no, personalized, event_name=event_doc.name)
-				sent.append({"guest": guest.name, "channel": "SMS"})
 
 			_log_notification(guest, event_doc, f"Thank you for joining {event_doc.event_name}!")
 
@@ -331,6 +343,19 @@ def _send_thank_you_messages(event_doc, channel):
 				f"Thank you message failed for {ci.guest}: {frappe.get_traceback()}",
 				"Send Reminder"
 			)
+
+	# Audit log for thank you messages
+	if sent:
+		try:
+			from invite.invite.doctype.invite_activity_log.invite_activity_log import log_action
+			log_action(
+				event=event_doc.name,
+				action_type="Thank You Sent",
+				subject=f"{len(sent)} thank you message(s) sent for {event_doc.event_name}",
+				extra_data={"sent_count": len(sent), "failed_count": len(failed), "channel": channel},
+			)
+		except Exception:
+			pass
 
 	frappe.db.commit()
 	return {"sent": sent, "failed": failed, "total_sent": len(sent), "total_failed": len(failed)}
@@ -359,8 +384,6 @@ def _send_email(recipient, subject, message, attachment_path=None):
 
 	if email_queue and attachment_path:
 		try:
-			# Store as file_url so Frappe's SendMailContext.include_attachments()
-			# can resolve the file content at send time
 			attachments = json.loads(email_queue.attachments) if email_queue.attachments else []
 			attachments.append({"file_url": attachment_path})
 			email_queue.db_set("attachments", json.dumps(attachments))
@@ -369,54 +392,51 @@ def _send_email(recipient, subject, message, attachment_path=None):
 
 
 def _send_whatsapp(mobile_no, message, attachment_path=None, event_name=None):
-	"""Send WhatsApp message with optional card/image attachment.
-	
-	Uses WhatsApp Cloud API if configured, otherwise logs to Notification Log.
-	
-	If attachment_path is provided, it is sent as a media attachment
-	(image or document) along with the message text as caption.
-	"""
+	"""Send WhatsApp message via configured provider (Official API or Twilio)."""
 	mobile = str(mobile_no or "").strip()
 	message = message or ""
-	attachment_path = attachment_path or ""
 
-	# Try to send via WhatsApp Cloud API
-	from invite.api.whatsapp import (
-		get_whatsapp_config,
-		send_media_message,
-		send_text_message,
-	)
+	settings = frappe.get_single("Event Settings")
+	provider = getattr(settings, "whatsapp_provider", "")
 
-	config = get_whatsapp_config()
 	api_sent = False
 
-	if config["enabled"] and mobile:
-		if attachment_path:
-			# Pass the file path directly for Frappe's get_file() to resolve
-			# attachment_path is already in /files/filename.pdf format
-			if attachment_path.startswith("http"):
-				file_path = attachment_path
-			elif attachment_path.startswith("/"):
-				file_path = attachment_path
-			else:
-				file_path = f"/{attachment_path}"
-
-			# Only attempt media if path is non-empty
-			if file_path.strip("/"):
-				success, _ = send_media_message(mobile, message, file_path)
-				api_sent = success
+	if provider == "Official WhatsApp API" and mobile:
+		from invite.api.whatsapp import get_whatsapp_config, send_media_message, send_text_message
+		config = get_whatsapp_config()
+		if config["enabled"]:
+			if attachment_path:
+				if attachment_path.startswith("http"):
+					file_path = attachment_path
+				elif attachment_path.startswith("/"):
+					file_path = attachment_path
+				else:
+					file_path = f"/{attachment_path}"
+				if file_path.strip("/"):
+					success, _ = send_media_message(mobile, message, file_path)
+					api_sent = success
 			else:
 				success = send_text_message(mobile, message)
 				api_sent = success
+
+	elif provider == "Twilio" and mobile:
+		from invite.api.twilio import send_whatsapp_message, send_template_message, get_template_sids
+		# Try Content API template first, fall back to plain text
+		template_type = _get_template_type_for_reminder(message)
+		tids = get_template_sids()
+		template_sid = tids.get(template_type, "") if template_type else ""
+
+		if template_sid and template_type:
+			# Build template variables from message context
+			variables = _build_template_variables(message, template_type)
+			success = send_template_message(mobile, template_sid, variables)
 		else:
-			success = send_text_message(mobile, message)
-			api_sent = success
+			success = send_whatsapp_message(mobile, message, attachment_path)
+		api_sent = success
 
 	# Always log the notification for audit trail
-	attach_info = f" [Attachment API Sent]" if attachment_path and api_sent else (
-		f" [Attachment: {attachment_path}]" if attachment_path else ""
-	)
-	log_subject = f"WhatsApp: {(message or '')[:80]}...{attach_info}"
+	status = "API Sent" if api_sent else "Logged"
+	log_subject = f"WhatsApp [{status}]: {(message or '')[:80]}..."
 
 	frappe.get_doc({
 		"doctype": "Notification Log",
@@ -428,18 +448,42 @@ def _send_whatsapp(mobile_no, message, attachment_path=None, event_name=None):
 	}).insert(ignore_permissions=True)
 
 
-def _send_sms(mobile_no, message, event_name=None):
-	"""Log SMS message.
-	Actual sending would integrate with an SMS provider like Beem/Africastalking.
+def _get_template_type_for_reminder(message):
+	"""Determine the template type based on message content."""
+	msg = (message or "").lower()
+	if "thank you" in msg or "appreciate" in msg:
+		return "thank_you"
+	elif "reminder" in msg:
+		return "event_reminder"
+	elif "rsvp" in msg and "confirm" in msg:
+		return "rsvp_confirmation"
+	elif "rsvp" in msg and "remind" in msg:
+		return "rsvp_reminder"
+	elif "invited" in msg or "invitation" in msg:
+		return "event_invitation"
+	elif "update" in msg or "changed" in msg:
+		return "event_update"
+	elif "check-in" in msg or "qr" in msg:
+		return "qr_checkin"
+	return None
+
+
+def _build_template_variables(message, template_type):
+	"""Build Content API template variables from message content.
+
+	Twilio Content API uses numbered variables (1, 2, 3...).
+	These map to template placeholders like {{1}}, {{2}}, etc.
 	"""
-	frappe.get_doc({
-		"doctype": "Notification Log",
-		"subject": f"SMS: {message[:80]}...",
-		"email": str(mobile_no or "").strip() or "unknown",
-		"for_user": frappe.session.user,
-		"document_type": "Event",
-		"document_name": event_name or "",
-	}).insert(ignore_permissions=True)
+	# Generic variables — the actual template in Twilio defines
+	# what {{1}}, {{2}}, etc. represent.
+	return {
+		"1": "Guest",
+		"2": "Event",
+		"3": "2026-12-31",
+		"4": "12:00 PM",
+		"5": "Venue",
+		"6": frappe.utils.get_url() + "/rsvp",
+	}
 
 
 def _log_notification(guest, event_doc, subject):
@@ -453,7 +497,6 @@ def _log_notification(guest, event_doc, subject):
 		"document_name": event_doc.name,
 	}).insert(ignore_permissions=True)
 
-	# Push real-time update so the sidebar refreshes immediately
 	frappe.publish_realtime(
 		"refetch_resource",
 		{"cache_key": "invite.api.notification.get_notifications"},

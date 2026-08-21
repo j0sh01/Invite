@@ -81,7 +81,9 @@ import { mobileSidebarOpened as sidebarOpened } from '@/composables/settings'
 const navItems = [
   { label: 'Dashboard', icon: 'home', to: 'Dashboard' },
   { label: 'Events', icon: 'calendar', to: 'Events' },
-  { label: 'Committee', icon: 'users', to: 'CommitteeMembers' },
+  { label: 'Frontdesk', icon: 'camera', to: 'Frontdesk' },
+  { label: 'Audit Log', icon: 'file-text', to: 'GlobalAuditLog' },
+  { label: 'Settings', icon: 'settings', to: 'AppSettings' },
 ]
 
 function toggleNotifications() {

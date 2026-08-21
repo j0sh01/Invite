@@ -17,9 +17,11 @@ def get_list(filters=None, limit=20, offset=0):
 
 	events = frappe.get_list("Event",
 		filters=base_filters,
-		fields=["name", "event_name", "event_type", "event_date", "event_time", "venue",
-			"event_status", "total_guests", "total_accepted", "total_checked_in",
-			"total_contributions", "total_contribution_amount", "image"],
+		fields=["name", "event_name", "event_type", "event_date", "event_time",
+			"venue", "location_address", "organizer_name", "organizer_contact", "organizer_email",
+			"max_guests", "description", "image", "currency",
+			"event_status", "total_guests", "total_invited", "total_rsvped",
+			"total_accepted", "total_declined", "total_checked_in"],
 		limit_start=offset,
 		limit_page_length=limit,
 		order_by="event_date DESC",
@@ -86,17 +88,31 @@ def get_dashboard_stats():
 		{"event_date": [">=", today()], "event_status": ["!=", "Cancelled"]},
 	)
 	total_guests = frappe.db.count("Guest")
-	total_contributions = frappe.db.count("Contribution")
-
-	contributions = frappe.get_all("Contribution", fields=["paid_amount"])
-	total_amount = sum(c.paid_amount or 0 for c in contributions)
 
 	return {
 		"total_events": total_events,
 		"upcoming_events": upcoming_events,
 		"total_guests": total_guests,
-		"total_contributions": total_contributions,
-		"total_contribution_amount": total_amount,
+	}
+
+
+@frappe.whitelist(allow_guest=True)
+def get_public_event(event):
+	"""Get public event details for guest-facing page."""
+	event_doc = frappe.get_doc("Event", event)
+	return {
+		"event": {
+			"name": event_doc.name,
+			"event_name": event_doc.event_name,
+			"event_type": event_doc.event_type,
+			"event_date": str(event_doc.event_date) if event_doc.event_date else None,
+			"event_time": event_doc.event_time,
+			"venue": event_doc.venue,
+			"location_address": event_doc.location_address,
+			"description": event_doc.description,
+			"image": event_doc.image,
+			"organizer_name": event_doc.organizer_name,
+		}
 	}
 
 
@@ -111,6 +127,5 @@ def get_options():
 		"event_types": get_names("Event Type", "event_type_name", order_by="event_type_name ASC"),
 		"event_statuses": get_names("Event Status", "status_name"),
 		"guest_categories": get_names("Guest Category", "category_name"),
-		"contribution_types": get_names("Contribution Type", "type_name"),
 		"rsvp_statuses": get_names("RSVP Status", "status", order_by="position ASC"),
 	}

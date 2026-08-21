@@ -2,7 +2,7 @@
 # MIT License. See license.txt
 
 import frappe
-from frappe.utils import today, getdate, add_days
+from frappe.utils import today, getdate
 
 
 @frappe.whitelist()
@@ -26,34 +26,12 @@ def event_summary(event, **kwargs):
 		group_by="rsvp_status",
 	)
 
-	# Contribution summary
-	contribution_summary = frappe.get_all(
-		"Contribution",
-		filters={"event": event},
-		fields=[
-			"sum(pledged_amount) as total_pledged",
-			"sum(paid_amount) as total_paid",
-			"sum(outstanding_amount) as total_outstanding",
-			"count(name) as total_contributions",
-		],
-	)[0]
-
 	# Check-in stats
 	checkin_stats = frappe.get_all(
 		"Check-In",
 		filters={"event": event},
 		fields=["count(name) as total", "sum(is_duplicate) as duplicates"],
 	)[0]
-
-	# Top contributors
-	top_contributors = frappe.get_all(
-		"Contribution",
-		filters={"event": event},
-		fields=["guest", "guest_name", "sum(paid_amount) as total_paid"],
-		group_by="guest",
-		order_by="total_paid DESC",
-		limit=10,
-	)
 
 	return {
 		"event": {
@@ -66,17 +44,10 @@ def event_summary(event, **kwargs):
 		},
 		"guests_by_category": guests_by_category or [],
 		"rsvp_by_status": rsvp_by_status or [],
-		"contributions": {
-			"total_pledged": contribution_summary.total_pledged or 0,
-			"total_paid": contribution_summary.total_paid or 0,
-			"total_outstanding": contribution_summary.total_outstanding or 0,
-			"total_count": contribution_summary.total_contributions or 0,
-		},
 		"checkins": {
 			"total": checkin_stats.total or 0,
 			"duplicates": checkin_stats.duplicates or 0,
 		},
-		"top_contributors": top_contributors or [],
 	}
 
 
@@ -86,10 +57,9 @@ def guest_list(event, **kwargs):
 	guests = frappe.get_all(
 		"Guest",
 		filters={"event": event},
-		fields=["full_name", "email", "mobile_no", "category", "guest_type",
+		fields=["full_name", "email", "mobile_no", "category",
 				"rsvp_status", "number_of_attendees", "invitation_status",
-				"pledge_amount", "paid_amount", "outstanding_amount",
-				"checked_in", "checked_in_at", "notes"],
+				"checked_in", "checked_in_at"],
 		order_by="creation ASC",
 	)
 	return guests
@@ -101,8 +71,7 @@ def dashboard(**kwargs):
 	events = frappe.get_all(
 		"Event",
 		fields=["name", "event_name", "event_type", "event_date", "event_status",
-				"total_guests", "total_accepted", "total_checked_in",
-				"total_contributions", "total_contribution_amount"],
+				"total_guests", "total_accepted", "total_checked_in"],
 		order_by="event_date DESC",
 		limit=10,
 	)
@@ -113,7 +82,6 @@ def dashboard(**kwargs):
 
 	total_guests = sum(e.total_guests or 0 for e in events)
 	total_checked_in = sum(e.total_checked_in or 0 for e in events)
-	total_contributions = sum(e.total_contribution_amount or 0 for e in events)
 
 	return {
 		"events": events,
@@ -123,44 +91,5 @@ def dashboard(**kwargs):
 			"completed": completed,
 			"total_guests": total_guests,
 			"total_checked_in": total_checked_in,
-			"total_contributions": total_contributions,
 		},
-	}
-
-
-@frappe.whitelist()
-def financial_report(event, **kwargs):
-	"""Get detailed financial report for an event."""
-	contributions = frappe.get_all(
-		"Contribution",
-		filters={"event": event},
-		fields=["guest_name", "contribution_type", "type", "pledged_amount",
-				"paid_amount", "outstanding_amount", "payment_status",
-				"payment_method", "payment_date", "transaction_reference"],
-		order_by="creation DESC",
-	)
-
-	summary = frappe.get_all(
-		"Contribution",
-		filters={"event": event},
-		fields=[
-			"contribution_type",
-			"count(name) as count",
-			"sum(pledged_amount) as total_pledged",
-			"sum(paid_amount) as total_paid",
-		],
-		group_by="contribution_type",
-	)
-
-	total_pledged = sum(c.pledged_amount or 0 for c in contributions)
-	total_paid = sum(c.paid_amount or 0 for c in contributions)
-	collection_rate = round(total_paid / total_pledged * 100, 1) if total_pledged > 0 else 0
-
-	return {
-		"contributions": contributions,
-		"by_type": summary,
-		"total_pledged": total_pledged,
-		"total_paid": total_paid,
-		"outstanding": total_pledged - total_paid,
-		"collection_rate": collection_rate,
 	}

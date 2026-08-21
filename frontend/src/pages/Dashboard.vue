@@ -1,7 +1,7 @@
 <template>
   <div class="max-w-7xl mx-auto">
     <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+    <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-8">
       <div class="bg-white rounded-lg border p-5">
         <div class="flex items-center gap-3">
           <div class="p-2 rounded-lg bg-blue-50">
@@ -38,17 +38,6 @@
         </div>
       </div>
 
-      <div class="bg-white rounded-lg border p-5">
-        <div class="flex items-center gap-3">
-          <div class="p-2 rounded-lg bg-amber-50">
-            <FeatherIcon name="dollar-sign" class="h-5 w-5 text-amber-600" />
-          </div>
-          <div>
-            <p class="text-sm text-gray-500">Contributions</p>
-            <p class="text-2xl font-semibold text-gray-900">{{ formatCurrency(stats.total_contributions) }}</p>
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- Upcoming Events -->
@@ -97,7 +86,7 @@
     </div>
 
     <!-- Quick Actions -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <div
         class="bg-white rounded-lg border p-5 hover:shadow-md cursor-pointer transition-shadow"
         @click="$router.push('/events')"

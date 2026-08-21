@@ -41,8 +41,10 @@ def get_list(event, filters=None, limit=50, offset=0):
 
 	invitations = frappe.get_list("Invitation",
 		filters=base_filters,
-		fields=["name", "guest", "guest_name", "invite_code", "invitation_type", "status",
-			"delivery_method", "sent_at", "delivery_status", "rsvp_status", "response_date",
+		fields=["name", "guest", "guest_name", "invite_code", "status",
+			"delivery_method", "recipient_contact", "sent_at", "delivered_at",
+			"delivery_status", "delivery_error", "viewed_at",
+			"rsvp_status", "response_date", "number_of_attendees",
 			"qr_code_image", "personalized_invite_card"],
 		limit_page_length=limit,
 		limit_start=offset,
@@ -55,7 +57,7 @@ def get_list(event, filters=None, limit=50, offset=0):
 
 
 @frappe.whitelist()
-def create_invitations(event, guest_ids, invitation_type="Digital", delivery_method="WhatsApp"):
+def create_invitations(event, guest_ids, delivery_method="WhatsApp"):
 	"""Create invitations for multiple guests."""
 	if isinstance(guest_ids, str):
 		guest_ids = json.loads(guest_ids)
@@ -75,7 +77,6 @@ def create_invitations(event, guest_ids, invitation_type="Digital", delivery_met
 			inv.event = event
 			inv.guest = guest_id
 			inv.guest_name = guest.full_name
-			inv.invitation_type = invitation_type
 			inv.delivery_method = delivery_method
 			inv.status = "Ready"
 			inv.insert(ignore_permissions=True)
@@ -83,13 +84,26 @@ def create_invitations(event, guest_ids, invitation_type="Digital", delivery_met
 		except Exception as e:
 			errors.append({"guest": guest_id, "error": str(e)})
 
+	# Audit log for bulk creation
+	if created:
+		try:
+			from invite.invite.doctype.invite_activity_log.invite_activity_log import log_action
+			log_action(
+				event=event,
+				action_type="Invitation Created",
+				subject=f"{len(created)} invitation(s) created",
+				extra_data={"created": created, "delivery_method": delivery_method},
+			)
+		except Exception:
+			pass
+
 	return {"created": created, "errors": errors, "total_created": len(created), "total_errors": len(errors)}
 
 
 @frappe.whitelist()
-def send(event, invitation_type="WhatsApp"):
+def send(event, delivery_method="WhatsApp"):
 	"""Send pending invitations."""
-	return frappe.get_attr("invite.invite.doctype.invitation.invitation.send_invitations")(event, invitation_type)
+	return frappe.get_attr("invite.invite.doctype.invitation.invitation.send_invitations")(event, delivery_method)
 
 
 @frappe.whitelist()

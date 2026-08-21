@@ -17,8 +17,7 @@
   "checked_in_by",
   "check_in_method",
   "number_of_attendees",
-  "is_duplicate",
-  "notes"
+  "is_duplicate"
  ],
  "fields": [
   {
@@ -94,11 +93,6 @@
    "in_list_view": 1,
    "label": "Duplicate Scan",
    "read_only": 1
-  },
-  {
-   "fieldname": "notes",
-   "fieldtype": "Small Text",
-   "label": "Notes"
   }
  ],
  "grid_page_length": 50,
@@ -132,17 +126,6 @@
    "read": 1,
    "report": 1,
    "role": "Event Manager",
-   "share": 1,
-   "write": 1
-  },
-  {
-   "create": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "Committee Member",
    "share": 1,
    "write": 1
   }

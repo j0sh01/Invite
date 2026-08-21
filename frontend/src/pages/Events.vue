@@ -1,12 +1,12 @@
 <template>
   <div class="max-w-7xl mx-auto">
     <!-- Header -->
-    <div class="flex items-center justify-between gap-4 mb-6 flex-wrap">
+    <div class="flex items-center justify-between gap-4 mb-6">
       <div class="min-w-0 flex-1">
-        <h1 class="text-2xl font-semibold text-gray-900 truncate">Events</h1>
+        <h1 class="text-xl sm:text-2xl font-semibold text-gray-900 truncate">Events</h1>
         <p class="text-sm text-gray-500 mt-1 truncate">Manage your ceremonies and events</p>
       </div>
-      <Button @click="showCreateModal = true" variant="solid" size="sm" iconLeft="plus" :label="__('New Event')" />
+      <Button @click="showCreateModal = true" variant="solid" size="sm" iconLeft="plus" :label="__('New Event')" class="flex-shrink-0" />
     </div>
 
     <!-- Events Grid -->
@@ -61,7 +61,7 @@
       <template #body-content>
         <div class="space-y-4">
           <FormControl label="Event Name" v-model="newEvent.event_name" required />
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormControl label="Event Type" type="select" v-model="newEvent.event_type" :options="eventTypes" />
             <FormControl label="Status" type="select" v-model="newEvent.event_status" :options="eventStatuses" />
           </div>
@@ -70,7 +70,7 @@
           <FormControl label="Venue" v-model="newEvent.venue" />
           <FormControl label="Location/Address" type="textarea" v-model="newEvent.location_address" />
           <FormControl label="Organizer Name" v-model="newEvent.organizer_name" required />
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormControl label="Organizer Contact" v-model="newEvent.organizer_contact" />
             <FormControl label="Organizer Email" v-model="newEvent.organizer_email" />
           </div>

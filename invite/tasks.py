@@ -21,7 +21,6 @@ def send_reminder_notifications():
 
 	for event_name in events:
 		event = frappe.get_doc("Event", event_name)
-		# Find guests who haven't RSVPed yet
 		pending_guests = frappe.get_all(
 			"Guest",
 			filters={
@@ -33,7 +32,6 @@ def send_reminder_notifications():
 
 		for guest_name in pending_guests:
 			guest = frappe.get_cached_doc("Guest", guest_name)
-			# Log reminder (actual sending would integrate with Beem/SMS/WhatsApp)
 			frappe.get_doc({
 				"doctype": "Notification Log",
 				"subject": f"Reminder: {event.event_name} is coming up!",
@@ -43,7 +41,6 @@ def send_reminder_notifications():
 				"document_name": event_name,
 			}).insert(ignore_permissions=True)
 
-		# Push real-time update to the event owner so their sidebar refreshes
 		frappe.publish_realtime(
 			"refetch_resource",
 			{"cache_key": "invite.api.notification.get_notifications"},
@@ -69,7 +66,6 @@ def send_thank_you_messages():
 
 	for event_name in events:
 		event = frappe.get_doc("Event", event_name)
-		# Find guests who attended
 		checked_in_guests = frappe.get_all(
 			"Check-In",
 			filters={"event": event_name, "is_duplicate": 0},
@@ -78,7 +74,6 @@ def send_thank_you_messages():
 
 		for checkin in checked_in_guests:
 			guest = frappe.get_cached_doc("Guest", checkin.guest)
-			# Create notification log (actual sending would integrate with Beem/SMS/WhatsApp)
 			frappe.get_doc({
 				"doctype": "Notification Log",
 				"subject": f"Thank you for joining {event.event_name}!",
@@ -88,7 +83,6 @@ def send_thank_you_messages():
 				"document_name": event_name,
 			}).insert(ignore_permissions=True)
 
-		# Push real-time update to the event owner so their sidebar refreshes
 		frappe.publish_realtime(
 			"refetch_resource",
 			{"cache_key": "invite.api.notification.get_notifications"},
@@ -101,83 +95,43 @@ def send_thank_you_messages():
 	)
 
 
-def send_contribution_reminders():
-	"""Send automated contribution reminders for events with outstanding amounts."""
-	events = frappe.get_all(
-		"Event",
-		filters={"event_status": ["in", ["RSVPs Open", "Ongoing", "Invitations Sent"]]},
-		pluck="name",
-	)
-
-	for event_name in events:
-		guests_with_outstanding = frappe.get_all(
-			"Guest",
-			filters={
-				"event": event_name,
-				"outstanding_amount": [">", 0],
-			},
-			fields=["name", "full_name", "email", "mobile_no", "outstanding_amount"],
-		)
-
-		if not guests_with_outstanding:
-			continue
-
-		event = frappe.get_cached_doc("Event", event_name)
-		currency = event.currency or "TZS"
-
-		for guest in guests_with_outstanding:
-			message = (
-				f"Dear {guest.full_name}, this is a friendly reminder that you have an "
-				f"outstanding contribution of {currency} {guest.outstanding_amount:,.0f} "
-				f"for {event.event_name}. Thank you for your generous support!"
-			)
-
-			frappe.get_doc({
-				"doctype": "Notification Log",
-				"subject": f"Contribution Reminder: {event.event_name}",
-				"email": guest.email or guest.mobile_no,
-				"for_user": guest.email or guest.mobile_no,
-				"document_type": "Event",
-				"document_name": event_name,
-			}).insert(ignore_permissions=True)
-
-		# Push real-time update to the event owner so their sidebar refreshes
-		frappe.publish_realtime(
-			"refetch_resource",
-			{"cache_key": "invite.api.notification.get_notifications"},
-			user=event.owner,
-		)
-
-		frappe.log_error(
-			f"Sent contribution reminders for {len(guests_with_outstanding)} guests in {event_name}",
-			"Invite Contribution Reminders"
-		)
-
-	if not events:
-		frappe.log_error("No events found for contribution reminders", "Invite Contribution Reminders")
-
-
 def process_pending_invitations():
-	"""Process pending invitations (mark as sent, etc.)."""
-	# This would be where actual integration with messaging providers happens
+	"""Process pending invitations that haven't been sent yet.
+
+	Only processes invitations that are in 'Ready' status and have a delivery method.
+	Actually sends messages through the configured provider.
+	"""
 	pending = frappe.get_all(
 		"Invitation",
-		filters={"status": "Ready", "delivery_status": "Pending"},
+		filters={"status": "Ready", "delivery_method": ["in", ["WhatsApp", "SMS"]]},
 		pluck="name",
-		limit=50,
+		limit=20,
 	)
 
-	for inv_name in pending:
-		inv = frappe.get_doc("Invitation", inv_name)
-		# Simulate sending (in production, call Beem/WhatsApp API)
-		inv.status = "Sent"
-		inv.sent_at = now()
-		inv.delivery_status = "Delivered"
-		inv.delivered_at = now()
-		inv.save(ignore_permissions=True)
+	if not pending:
+		return
 
-	if pending:
-		frappe.log_error(
-			f"Processed {len(pending)} pending invitations",
+	sent_count = 0
+	failed_count = 0
+
+	for inv_name in pending:
+		try:
+			# Use the invitation's send_single_invitation function
+			result = frappe.get_attr(
+				"invite.invite.doctype.invitation.invitation.send_single_invitation"
+			)(inv_name, frappe.db.get_value("Invitation", inv_name, "delivery_method") or "WhatsApp")
+			if result.get("success"):
+				sent_count += 1
+			else:
+				failed_count += 1
+		except Exception as e:
+			failed_count += 1
+			frappe.log_error(
+				f"Failed to process invitation {inv_name}: {e}",
+				"Invite Pending Invitations"
+			)
+
+	frappe.log_error(
+			f"Processed {len(pending)} pending invitations: {sent_count} sent, {failed_count} failed",
 			"Invite Pending Invitations"
 		)

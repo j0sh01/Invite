@@ -2,11 +2,12 @@
   <div class="max-w-7xl mx-auto">
     <div class="flex items-center justify-between mb-6">
       <div>
-        <h1 class="text-2xl font-semibold text-gray-900">Invitations</h1>
+        <h1 class="text-xl sm:text-2xl font-semibold text-gray-900">Invitations</h1>
         <p class="text-sm text-gray-500 mt-1">{{ totalInvitations }} invitations · {{ sentCount }} sent</p>
       </div>
       <div class="flex gap-2">
-        <Button @click="generateBulkInvitations" variant="ghost" size="sm" :loading="generating" iconLeft="zap" :label="__('Generate All')" />
+        <Button @click="generateBulkInvitations" variant="ghost" size="sm" :loading="generating" iconLeft="zap" :label="__('Generate')" class="hidden sm:inline-flex" />
+        <Button @click="generateBulkInvitations" variant="ghost" size="sm" :loading="generating" iconLeft="zap" class="sm:hidden" />
         <Button @click="sendBulk" variant="solid" size="sm" iconLeft="send" :label="__('Send All')" />
       </div>
     </div>
@@ -34,7 +35,7 @@
             </button>
           </div>
           <div class="bg-gray-50 rounded-lg p-3 text-sm text-gray-500">
-            <p><strong>{{ pendingInvitations.length }}</strong> invitations ready to send</p>
+            <p><strong>{{ pendingInvitations.length }}</strong> pending · <strong>{{ stats.failed }}</strong> failed (will retry)</p>
           </div>
         </div>
       </template>
@@ -82,12 +83,13 @@
     </Dialog>
 
     <!-- Single Send Modal -->
-    <Dialog :options="{ title: 'Send Invitation' }" v-model="showSingleSendModal">
+    <Dialog :options="{ title: sendingInvitation?.status === 'Failed' ? 'Retry Invitation' : 'Send Invitation' }" v-model="showSingleSendModal">
       <template #body-content>
         <div class="space-y-4">
-          <div v-if="sendingInvitation" class="bg-gray-50 rounded-lg p-3 text-sm">
+          <div v-if="sendingInvitation" class="rounded-lg p-3 text-sm" :class="sendingInvitation?.status === 'Failed' ? 'bg-orange-50 border border-orange-200' : 'bg-gray-50'">
             <p class="text-gray-700">Sending to: <strong>{{ sendingInvitation?.guest_name }}</strong></p>
             <p class="text-xs text-gray-400 mt-1">Invite code: {{ sendingInvitation?.invite_code }}</p>
+            <p v-if="sendingInvitation?.status === 'Failed' && sendingInvitation?.delivery_error" class="text-xs text-orange-600 mt-1">Previous error: {{ sendingInvitation.delivery_error }}</p>
           </div>
           <p class="text-sm text-gray-600">Select the delivery method:</p>
           <div class="grid grid-cols-3 gap-3">
@@ -107,13 +109,13 @@
       <template #actions>
         <Button @click="showSingleSendModal = false; sendingInvitation = null" variant="ghost" size="sm">Cancel</Button>
         <Button @click="confirmSingleSend" variant="solid" size="sm" :loading="sending">
-          Send via {{ singleSendMedium || '...' }}
+          {{ sendingInvitation?.status === 'Failed' ? 'Retry' : 'Send' }} via {{ singleSendMedium || '...' }}
         </Button>
       </template>
     </Dialog>
 
     <!-- Statistics -->
-    <div class="grid grid-cols-4 gap-4 mb-6">
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
       <div class="bg-white rounded-lg border p-4 text-center">
         <p class="text-lg font-semibold text-gray-900">{{ stats.total || 0 }}</p>
         <p class="text-xs text-gray-500">Total</p>
@@ -134,52 +136,85 @@
 
     <!-- Invitations List -->
     <div class="bg-white rounded-lg border overflow-hidden">
-      <table class="w-full">
-        <thead class="bg-gray-50 border-b">
-          <tr>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Guest</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invite Code</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Delivery</th>
-            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">RSVP</th>
-            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y">
-          <tr v-for="inv in invitations" :key="inv.name" class="hover:bg-gray-50">
-            <td class="px-4 py-3 text-sm text-gray-900">{{ inv.guest_name }}</td>
-            <td class="px-4 py-3 text-sm font-mono text-gray-600">{{ inv.invite_code }}</td>
-            <td class="px-4 py-3 text-sm text-gray-600">{{ inv.invitation_type }}</td>
-            <td class="px-4 py-3">
-              <span :class="statusBadge(inv.status)" class="text-xs px-2 py-1 rounded-full">{{ inv.status }}</span>
-            </td>
-            <td class="px-4 py-3">
-              <div class="text-sm">
-                <span :class="deliveryBadge(inv.delivery_status)">{{ inv.delivery_status || 'Pending' }}</span>
-                <p v-if="inv.sent_at" class="text-xs text-gray-400 mt-0.5">{{ formatDateTime(inv.sent_at) }}</p>
-              </div>
-            </td>
-            <td class="px-4 py-3">
-              <span :class="rsvpBadge(inv.rsvp_status)" class="text-xs px-2 py-1 rounded-full">
-                {{ inv.rsvp_status || 'Pending' }}
-              </span>
-            </td>
-            <td class="px-4 py-3 text-right">
-              <div class="flex justify-end gap-1">
-                <Button v-if="inv.qr_code_image" @click="downloadQR(inv)" variant="ghost" class="text-xs">QR</Button>
-                <Button @click="downloadCard(inv)" variant="ghost" class="text-xs" :loading="inv._downloading">Card</Button>
-                <Button @click="openSingleSend(inv)" variant="ghost" class="text-xs">Send</Button>
-              </div>
-            </td>
-          </tr>
-          <tr v-if="!invitations.length">
-            <td colspan="7" class="px-4 py-12 text-center text-gray-500 text-sm">
-              No invitations yet. Generate invitations from the Guests page.
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[700px]">
+          <thead class="bg-gray-50 border-b">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Guest</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden sm:table-cell">Code</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">Delivery</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell">RSVP</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">Guests</th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y">
+            <tr v-for="inv in invitations" :key="inv.name" class="hover:bg-gray-50" :class="inv.status === 'Failed' ? 'bg-red-50/30' : ''">
+              <td class="px-4 py-3">
+                <p class="text-sm text-gray-900">{{ inv.guest_name }}</p>
+                <p class="text-xs text-gray-400 sm:hidden font-mono">{{ inv.invite_code }}</p>
+              </td>
+              <td class="px-4 py-3 text-sm font-mono text-gray-600 hidden sm:table-cell">{{ inv.invite_code }}</td>
+              <td class="px-4 py-3">
+                <span :class="statusBadge(inv.status)" class="text-xs px-2 py-1 rounded-full">{{ inv.status }}</span>
+              </td>
+              <td class="px-4 py-3 hidden lg:table-cell">
+                <div class="text-sm">
+                  <span :class="deliveryBadge(inv.delivery_status)">{{ inv.delivery_status || 'Pending' }}</span>
+                  <p v-if="inv.sent_at" class="text-xs text-gray-400 mt-0.5">{{ formatDateTime(inv.sent_at) }}</p>
+                  <p v-if="inv.delivered_at" class="text-xs text-green-500 mt-0.5">Delivered: {{ formatDateTime(inv.delivered_at) }}</p>
+                  <p v-if="inv.delivery_status === 'Failed' && inv.delivery_error" class="text-xs text-red-500 mt-1 max-w-[200px] truncate" :title="inv.delivery_error">{{ inv.delivery_error }}</p>
+                </div>
+              </td>
+              <td class="px-4 py-3 hidden md:table-cell">
+                <span :class="rsvpBadge(inv.rsvp_status)" class="text-xs px-2 py-1 rounded-full">
+                  {{ inv.rsvp_status || 'Pending' }}
+                </span>
+              </td>
+              <td class="px-4 py-3 text-sm text-gray-600 hidden lg:table-cell">
+                {{ inv.number_of_attendees || 1 }}
+              </td>
+              <td class="px-4 py-3 text-right">
+                <div class="flex justify-end gap-1 items-center">
+                  <Button v-if="inv.qr_code_image" @click="downloadQR(inv)" variant="ghost" class="text-xs hidden sm:inline-flex">QR</Button>
+                  <Button @click="downloadCard(inv)" variant="ghost" class="text-xs" :loading="inv._downloading">Card</Button>
+                  <!-- Send: only for Draft/Ready -->
+                  <Button
+                    v-if="inv.status === 'Draft' || inv.status === 'Ready'"
+                    @click="openSingleSend(inv)"
+                    theme="gray"
+                    variant="subtle"
+                    size="sm"
+                    iconLeft="send"
+                    label="Send"
+                  />
+                  <!-- Retry: only for Failed -->
+                  <Button
+                    v-if="inv.status === 'Failed'"
+                    @click="openSingleSend(inv)"
+                    theme="orange"
+                    variant="subtle"
+                    size="sm"
+                    iconLeft="refresh-cw"
+                    label="Retry"
+                  />
+                  <!-- Sent badge: for sent/delivered -->
+                  <span v-if="inv.status === 'Sent' || inv.status === 'Delivered'" class="inline-flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                    <FeatherIcon name="check" class="h-3 w-3" />
+                    Sent
+                  </span>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="!invitations.length">
+              <td colspan="8" class="px-4 py-12 text-center text-gray-500 text-sm">
+                No invitations yet. Generate invitations from the Guests page.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </template>
@@ -189,6 +224,7 @@ import { ref, computed, onMounted } from 'vue'
 import { frappeRequest } from '@/utils/api'
 import EventTabs from '@/components/EventTabs.vue'
 import { useNotifications } from '@/composables/notifications'
+import { FeatherIcon } from 'frappe-ui'
 
 const props = defineProps({ eventId: String })
 
@@ -286,7 +322,7 @@ async function sendWithMedium() {
       url: 'invite.api.invitation.send',
       params: { 
         event: props.eventId, 
-        invitation_type: selectedMedium.value,
+        delivery_method: selectedMedium.value,
       },
     })
     showSendModal.value = false
@@ -321,19 +357,19 @@ async function openSingleSend(inv) {
 async function confirmSingleSend() {
   sending.value = true
   try {
-    await frappeRequest({
-      url: 'invite.invite.doctype.invitation.invitation.send_invitations',
+    const result = await frappeRequest({
+      url: 'invite.invite.doctype.invitation.invitation.send_single_invitation',
       params: { 
-        event: props.eventId, 
-        invitation_type: singleSendMedium.value,
+        invitation: sendingInvitation.value?.name,
+        delivery_method: singleSendMedium.value,
       },
     })
     showSingleSendModal.value = false
     sendResult.value = {
-      error: false,
-      message: `Invitation sent via ${singleSendMedium.value}.`,
-      sent: [sendingInvitation.value?.guest_name || 'Invitation'],
-      failed: [],
+      error: !result.success,
+      message: result.message || `Invitation sent via ${singleSendMedium.value}.`,
+      sent: result.success ? [sendingInvitation.value?.guest_name || 'Invitation'] : [],
+      failed: result.success ? [] : [sendingInvitation.value?.guest_name || 'Invitation'],
     }
     showSendResultModal.value = true
     sendingInvitation.value = null

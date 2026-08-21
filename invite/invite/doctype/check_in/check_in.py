@@ -18,33 +18,20 @@ class CheckIn(Document):
 			self.update_guest_checkin()
 
 	def set_number_of_attendees(self):
-		"""Set the number of attendees based on guest type."""
+		"""Set the number of attendees from guest record."""
 		if self.guest and not self.number_of_attendees:
 			guest = frappe.get_cached_doc("Guest", self.guest)
 			self.number_of_attendees = guest.number_of_attendees or 1
 
 	def get_allowed_scans(self):
-		"""Get how many check-in scans are allowed for this guest based on type."""
+		"""Get how many check-in scans are allowed based on number_of_attendees."""
 		if not self.guest:
 			return 1
 		guest = frappe.get_cached_doc("Guest", self.guest)
-		# Couple/Family can have multiple scans; Individual/Group = 1
-		guest_type_map = {
-			"Individual": 1,
-			"Couple": 2,
-		}
-		allowed = guest_type_map.get(guest.guest_type)
-		if allowed is not None:
-			return allowed
-		# For Family/Group types, use number_of_attendees (default 1)
 		return guest.number_of_attendees or 1
 
 	def detect_duplicate(self):
-		"""Check if guest has exceeded allowed check-in scans based on guest type.
-		- Individual: max 1 scan before duplicate
-		- Couple: max 2 scans before duplicate
-		- Family/Group: max = number_of_attendees before duplicate
-		"""
+		"""Check if guest has exceeded allowed check-in scans based on number_of_attendees."""
 		if not self.guest:
 			return
 
@@ -105,6 +92,27 @@ def scan_qr():
 	checkin.check_in_method = "QR Code Scan"
 	checkin.insert(ignore_permissions=True)
 
+	# Audit log
+	if checkin.is_duplicate:
+		_action_type = "Duplicate Scan"
+	else:
+		_action_type = "Check-In (QR Scan)"
+	try:
+		from invite.invite.doctype.invite_activity_log.invite_activity_log import log_action
+		log_action(
+			event=event,
+			action_type=_action_type,
+			subject=f"{invitation.guest_name} checked in via QR scan"
+				+ (" (duplicate)" if checkin.is_duplicate else ""),
+			guest=invitation.guest,
+			guest_name=invitation.guest_name,
+			reference_doctype="Check-In",
+			reference_name=checkin.name,
+			extra_data={"code": code, "method": "QR Code Scan"},
+		)
+	except Exception:
+		pass
+
 	return {
 		"success": True,
 		"guest_name": invitation.guest_name,
@@ -151,6 +159,27 @@ def manual_checkin(event, guest=None, invite_code=None):
 	checkin.invitation = invitation
 	checkin.check_in_method = "Manual Entry" if guest else "Invite Code"
 	checkin.insert(ignore_permissions=True)
+
+	# Audit log
+	if checkin.is_duplicate:
+		_action_type = "Duplicate Scan"
+	else:
+		_action_type = "Check-In (Manual)" if guest else "Check-In (Invite Code)"
+	try:
+		from invite.invite.doctype.invite_activity_log.invite_activity_log import log_action
+		log_action(
+			event=event,
+			action_type=_action_type,
+			subject=f"{guest_doc.full_name} checked in via {checkin.check_in_method}"
+				+ (" (duplicate)" if checkin.is_duplicate else ""),
+			guest=guest_doc.name,
+			guest_name=guest_doc.full_name,
+			reference_doctype="Check-In",
+			reference_name=checkin.name,
+			extra_data={"method": checkin.check_in_method},
+		)
+	except Exception:
+		pass
 
 	return {
 		"success": True,

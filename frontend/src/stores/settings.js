@@ -1,10 +1,7 @@
 import { createResource } from 'frappe-ui'
 import { reactive, ref } from 'vue'
 
-const settings = ref({
-  app_name: 'Invite',
-  app_logo: null,
-})
+const settings = ref({})
 
 export function getSettings() {
   // Fetch settings from server
@@ -15,24 +12,16 @@ export function getSettings() {
     onSuccess: (data) => {
       if (data) {
         settings.value = data
-        setupBrand()
       }
     },
   })
 
-  function setupBrand() {
-    brand.name = settings.value?.app_name || 'Invite'
-    brand.logo = settings.value?.app_logo
-  }
-
   const brand = reactive({
     name: 'Invite',
-    logo: null,
   })
 
   return {
     settings,
     brand,
-    setupBrand,
   }
 }

@@ -11,9 +11,9 @@ def after_install(force=False):
 	add_default_event_types()
 	add_default_event_statuses()
 	add_default_guest_categories()
-	add_default_contribution_types()
 	add_default_rsvp_statuses()
 	create_event_settings()
+	add_default_message_templates()
 	frappe.db.commit()
 
 
@@ -80,24 +80,6 @@ def add_default_guest_categories():
 		doc.insert()
 
 
-def add_default_contribution_types():
-	"""Create default contribution/payment types."""
-	types = [
-		{"type_name": "Cash Contribution", "is_cash": 1, "position": 1},
-		{"type_name": "In-Kind Contribution", "is_cash": 0, "position": 2},
-		{"type_name": "Mobile Money", "is_cash": 1, "position": 3},
-		{"type_name": "Bank Transfer", "is_cash": 1, "position": 4},
-	]
-
-	for t in types:
-		if frappe.db.exists("Contribution Type", t["type_name"]):
-			continue
-		doc = frappe.new_doc("Contribution Type")
-		doc.type_name = t["type_name"]
-		doc.is_cash = t["is_cash"]
-		doc.position = t["position"]
-		doc.insert()
-
 
 def add_default_rsvp_statuses():
 	"""Create default RSVP statuses."""
@@ -125,3 +107,41 @@ def create_event_settings():
 	settings = frappe.new_doc("Event Settings")
 	settings.default_currency = "TZS"
 	settings.insert()
+
+
+def add_default_message_templates():
+	"""Create default message templates."""
+	templates = [
+		{
+			"template_name": "Event Invitation",
+			"template_type": "Event Invitation",
+			"channel": "WhatsApp",
+			"body": "Dear {guest_name},\n\nYou are invited to {event_name}!\n\n📅 Date: {event_date}\n🕐 Time: {event_time}\n📍 Venue: {venue}\n\nPlease RSVP here: {rsvp_link}\n\nWe look forward to seeing you!",
+		},
+		{
+			"template_name": "RSVP Confirmation",
+			"template_type": "RSVP Confirmation",
+			"channel": "WhatsApp",
+			"body": "Thank you, {guest_name}! Your attendance for {event_name} has been confirmed.\n\n📅 Date: {event_date}\n📍 Venue: {venue}\n\nSee you there!",
+		},
+		{
+			"template_name": "Event Reminder",
+			"template_type": "Event Reminder",
+			"channel": "WhatsApp",
+			"body": "Hi {guest_name},\n\nThis is a friendly reminder that {event_name} is coming up!\n\n📅 Date: {event_date}\n📍 Venue: {venue}\n\nPlease RSVP if you haven't already: {rsvp_link}",
+		},
+		{
+			"template_name": "Thank You",
+			"template_type": "Thank You",
+			"channel": "WhatsApp",
+			"body": "Dear {guest_name},\n\nThank you for attending {event_name}! We truly appreciate your presence and support.\n\nBest regards,\nThe Organizing Committee",
+		},
+	]
+
+	for template in templates:
+		if frappe.db.exists("Message Template", template["template_name"]):
+			continue
+		doc = frappe.new_doc("Message Template")
+		doc.update(template)
+		doc.enabled = 1
+		doc.insert()

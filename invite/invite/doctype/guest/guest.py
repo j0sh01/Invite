@@ -73,10 +73,9 @@ def import_guests(event, guests_data, **kwargs):
 			guest.mobile_no = guest_data.get("mobile_no", "")
 			guest.phone = guest_data.get("phone", "")
 			guest.category = guest_data.get("category", "")
-			guest.guest_type = guest_data.get("guest_type", "Individual")
+			guest.number_of_attendees = guest_data.get("number_of_attendees", 1)
 			guest.plus_one = guest_data.get("plus_one", 0)
 			guest.plus_one_name = guest_data.get("plus_one_name", "")
-			guest.notes = guest_data.get("notes", "")
 			guest.insert(ignore_permissions=True)
 			created.append(guest.name)
 		except Exception as e:
@@ -92,8 +91,7 @@ def get_event_guests(event, **kwargs):
 		"Guest",
 		filters={"event": event},
 		fields=["name", "full_name", "email", "mobile_no", "category", "rsvp_status",
-				"checked_in", "pledge_amount", "paid_amount", "outstanding_amount",
-				"invitation_status", "guest_type", "number_of_attendees"],
+				"checked_in", "invitation_status", "number_of_attendees"],
 		order_by="creation ASC",
 	)
 

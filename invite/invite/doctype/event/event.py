@@ -16,33 +16,10 @@ class Event(Document):
 
 	def validate(self):
 		self.validate_dates()
-		self.set_public_rsvp_code()
-
-
-	# Google Calendar integration hooks (suppressed)
-	def sync_with_google_calendar(self):
-		pass
-
-	def pulled_from_google_calendar(self):
-		return False
-
-	def before_google_calendar_sync(self):
-		pass
-
-	def after_google_calendar_sync(self):
-		pass
 
 	def validate_dates(self):
 		if self.event_date and getdate(self.event_date) < getdate(today()):
 			frappe.throw("Event date cannot be in the past.")
-
-		if self.end_date and self.event_date and getdate(self.end_date) < getdate(self.event_date):
-			frappe.throw("End date cannot be before event date.")
-
-	def set_public_rsvp_code(self):
-		if self.enable_public_rsvp and not self.public_rsvp_code:
-			import secrets
-			self.public_rsvp_code = secrets.token_hex(6).upper()
 
 	def on_update(self):
 		self.update_statistics()
@@ -68,14 +45,6 @@ class Event(Document):
 		self.total_accepted = len([r for r in rsvps if r.rsvp_status == "Accepted"])
 		self.total_declined = len([r for r in rsvps if r.rsvp_status == "Declined"])
 
-		contributions = frappe.get_all(
-			"Contribution",
-			filters={"event": self.name},
-			fields=["paid_amount", "name"],
-		)
-		self.total_contributions = len(contributions)
-		self.total_contribution_amount = sum(c.paid_amount or 0 for c in contributions)
-
 		checkins = frappe.get_all(
 			"Check-In",
 			filters={"event": self.name},
@@ -94,8 +63,6 @@ def get_event_stats(event_name, **kwargs):
 		"total_rsvped": event.total_rsvped,
 		"total_accepted": event.total_accepted,
 		"total_declined": event.total_declined,
-		"total_contributions": event.total_contributions,
-		"total_contribution_amount": event.total_contribution_amount,
 		"total_checked_in": event.total_checked_in,
 	}
 

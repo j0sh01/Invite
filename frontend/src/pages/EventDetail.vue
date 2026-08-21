@@ -35,7 +35,7 @@
     </div>
 
     <!-- Event Stats Cards (Responsive) -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2 sm:gap-3 mb-6">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-8 gap-2 sm:gap-3 mb-6">
       <div class="bg-white rounded-lg border p-2 sm:p-3 text-center">
         <p class="text-base sm:text-lg font-semibold text-gray-900">{{ event.total_guests || 0 }}</p>
         <p class="text-xs text-gray-500">Total Guests</p>
@@ -43,6 +43,10 @@
       <div class="bg-white rounded-lg border p-2 sm:p-3 text-center">
         <p class="text-base sm:text-lg font-semibold text-blue-600">{{ event.total_invited || 0 }}</p>
         <p class="text-xs text-gray-500">Invited</p>
+      </div>
+      <div class="bg-white rounded-lg border p-2 sm:p-3 text-center">
+        <p class="text-base sm:text-lg font-semibold text-indigo-600">{{ event.total_rsvped || 0 }}</p>
+        <p class="text-xs text-gray-500">RSVPed</p>
       </div>
       <div class="bg-white rounded-lg border p-2 sm:p-3 text-center">
         <p class="text-base sm:text-lg font-semibold text-green-600">{{ event.total_accepted || 0 }}</p>
@@ -56,21 +60,13 @@
         <p class="text-base sm:text-lg font-semibold text-amber-600">{{ event.total_checked_in || 0 }}</p>
         <p class="text-xs text-gray-500">Checked In</p>
       </div>
-      <div class="bg-white rounded-lg border p-2 sm:p-3 text-center">
-        <p class="text-base sm:text-lg font-semibold text-purple-600">{{ event.total_contributions || 0 }}</p>
-        <p class="text-xs text-gray-500">Contributions</p>
-      </div>
-      <div class="bg-white rounded-lg border p-2 sm:p-3 text-center col-span-2 sm:col-span-1">
-        <p class="text-base sm:text-lg font-semibold text-gray-900">{{ formatCurrency(event.total_contribution_amount) }}</p>
-        <p class="text-xs text-gray-500">Total Amount</p>
-      </div>
     </div>
 
     <!-- Sub-navigation Tabs -->
     <EventTabs :eventId="props.eventId" />
 
     <!-- Quick stats for overview tab -->
-    <div v-if="isOverviewTab" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div v-if="isOverviewTab" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
       <div class="bg-white rounded-lg border p-4 sm:p-5 hover:shadow-md cursor-pointer transition-shadow" @click="$router.push(`/events/${props.eventId}/guests`)">
         <FeatherIcon name="users" class="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 mb-2 sm:mb-3" />
         <h4 class="text-sm font-medium text-gray-900">Guests</h4>
@@ -80,11 +76,6 @@
         <FeatherIcon name="mail" class="h-6 w-6 sm:h-8 sm:w-8 text-green-500 mb-2 sm:mb-3" />
         <h4 class="text-sm font-medium text-gray-900">Invitations</h4>
         <p class="text-xs text-gray-500 mt-1">Send and track invitations</p>
-      </div>
-      <div class="bg-white rounded-lg border p-4 sm:p-5 hover:shadow-md cursor-pointer transition-shadow" @click="$router.push(`/events/${props.eventId}/contributions`)">
-        <FeatherIcon name="dollar-sign" class="h-6 w-6 sm:h-8 sm:w-8 text-amber-500 mb-2 sm:mb-3" />
-        <h4 class="text-sm font-medium text-gray-900">Contributions</h4>
-        <p class="text-xs text-gray-500 mt-1">Track pledges and payments</p>
       </div>
       <div class="bg-white rounded-lg border p-4 sm:p-5 hover:shadow-md cursor-pointer transition-shadow" @click="$router.push(`/events/${props.eventId}/checkin`)">
         <FeatherIcon name="camera" class="h-6 w-6 sm:h-8 sm:w-8 text-purple-500 mb-2 sm:mb-3" />

@@ -35,7 +35,7 @@ import { Dropdown } from 'frappe-ui'
 import { frappeRequest } from '@/utils/api'
 import { sessionStore } from '@/stores/session'
 import { toggleTheme } from '@/stores/theme'
-import { showAboutModal, showSettings, isMobileView } from '@/composables/settings'
+import { showAboutModal, isMobileView } from '@/composables/settings'
 import Apps from '@/components/Apps.vue'
 
 const props = defineProps({
@@ -81,7 +81,7 @@ const dropdownItems = computed(() => {
         {
           label: 'Settings',
           icon: 'settings',
-          onClick: () => { showSettings.value = true },
+          onClick: () => { window.location.href = '/invite/settings' },
           condition: () => !isMobileView.value,
         },
         {

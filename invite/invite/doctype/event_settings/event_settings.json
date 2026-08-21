@@ -9,27 +9,33 @@
   "default_currency",
   "default_event_type",
   "default_reminder_days",
-  "branding_tab",
-  "app_name",
-  "app_logo",
-  "favicon",
   "qr_settings_tab",
   "qr_code_foreground_color",
   "qr_code_background_color",
   "qr_code_size",
-  "invitation_tab",
-  "default_invitation_message",
-  "default_thank_you_template",
-  "sms_settings_tab",
-  "sms_provider",
-  "sms_api_key",
-  "sms_sender_id",
   "whatsapp_settings_tab",
   "whatsapp_provider",
   "whatsapp_api_key",
   "whatsapp_phone_number_id",
   "whatsapp_business_number",
-  "whatsapp_api_version"
+  "whatsapp_api_version",
+  "twilio_settings_tab",
+  "twilio_account_sid",
+  "twilio_auth_token",
+  "twilio_whatsapp_number",
+  "twilio_templates_section",
+  "twilio_template_invitation",
+  "twilio_template_rsvp_confirm",
+  "twilio_template_rsvp_reminder",
+  "twilio_template_event_reminder",
+  "twilio_template_event_update",
+  "twilio_template_qr_checkin",
+  "twilio_template_thank_you",
+  "google_calendar_tab",
+  "google_client_id",
+  "google_client_secret",
+  "frontdesk_tab",
+  "frontdesk_role"
  ],
  "fields": [
   {
@@ -57,27 +63,6 @@
    "label": "Default Reminder Days Before"
   },
   {
-   "fieldname": "branding_tab",
-   "fieldtype": "Tab Break",
-   "label": "Branding"
-  },
-  {
-   "fieldname": "app_name",
-   "fieldtype": "Data",
-   "label": "App Name"
-  },
-  {
-   "fieldname": "app_logo",
-   "fieldtype": "Attach Image",
-   "label": "App Logo"
-  },
-  {
-   "description": "An icon file with .ico extension. Should be 16x16 px.",
-   "fieldname": "favicon",
-   "fieldtype": "Attach",
-   "label": "Favicon"
-  },
-  {
    "fieldname": "qr_settings_tab",
    "fieldtype": "Tab Break",
    "label": "QR Code Settings"
@@ -101,42 +86,6 @@
    "label": "QR Code Size (px)"
   },
   {
-   "fieldname": "invitation_tab",
-   "fieldtype": "Tab Break",
-   "label": "Invitation"
-  },
-  {
-   "fieldname": "default_invitation_message",
-   "fieldtype": "Text Editor",
-   "label": "Default Invitation Message"
-  },
-  {
-   "fieldname": "default_thank_you_template",
-   "fieldtype": "Text Editor",
-   "label": "Default Thank You Template"
-  },
-  {
-   "fieldname": "sms_settings_tab",
-   "fieldtype": "Tab Break",
-   "label": "SMS Settings"
-  },
-  {
-   "fieldname": "sms_provider",
-   "fieldtype": "Select",
-   "label": "SMS Provider",
-   "options": "\nBeem Africa\nTwilio\nAfrica's Talking\nInfoBip\nOther"
-  },
-  {
-   "fieldname": "sms_api_key",
-   "fieldtype": "Password",
-   "label": "SMS API Key"
-  },
-  {
-   "fieldname": "sms_sender_id",
-   "fieldtype": "Data",
-   "label": "SMS Sender ID"
-  },
-  {
    "fieldname": "whatsapp_settings_tab",
    "fieldtype": "Tab Break",
    "label": "WhatsApp Settings"
@@ -145,12 +94,12 @@
    "fieldname": "whatsapp_provider",
    "fieldtype": "Select",
    "label": "WhatsApp Provider",
-   "options": "\nBeem Africa\nTwilio\nMeta API\nOther"
+   "options": "\nOfficial WhatsApp API\nTwilio"
   },
   {
    "fieldname": "whatsapp_api_key",
    "fieldtype": "Password",
-   "label": "WhatsApp API Key"
+   "label": "WhatsApp API Access Token"
   },
   {
    "description": "The Phone Number ID from Meta WhatsApp Cloud API dashboard",
@@ -169,6 +118,96 @@
    "fieldname": "whatsapp_api_version",
    "fieldtype": "Data",
    "label": "WhatsApp API Version"
+  },
+  {
+   "fieldname": "twilio_settings_tab",
+   "fieldtype": "Tab Break",
+   "label": "Twilio Settings",
+   "depends_on": "eval:doc.whatsapp_provider=='Twilio'"
+  },
+  {
+   "fieldname": "twilio_account_sid",
+   "fieldtype": "Data",
+   "label": "Twilio Account SID"
+  },
+  {
+   "fieldname": "twilio_auth_token",
+   "fieldtype": "Password",
+   "label": "Twilio Auth Token"
+  },
+  {
+   "fieldname": "twilio_whatsapp_number",
+   "fieldtype": "Data",
+   "label": "Twilio WhatsApp Number",
+   "description": "Include country code, e.g. +14155238886"
+  },
+  {
+   "fieldname": "twilio_templates_section",
+   "fieldtype": "Section Break",
+   "label": "Twilio Content Templates",
+   "depends_on": "eval:doc.whatsapp_provider=='Twilio'"
+  },
+  {
+   "fieldname": "twilio_template_invitation",
+   "fieldtype": "Data",
+   "label": "Event Invitation Template SID"
+  },
+  {
+   "fieldname": "twilio_template_rsvp_confirm",
+   "fieldtype": "Data",
+   "label": "RSVP Confirmation Template SID"
+  },
+  {
+   "fieldname": "twilio_template_rsvp_reminder",
+   "fieldtype": "Data",
+   "label": "RSVP Reminder Template SID"
+  },
+  {
+   "fieldname": "twilio_template_event_reminder",
+   "fieldtype": "Data",
+   "label": "Event Reminder Template SID"
+  },
+  {
+   "fieldname": "twilio_template_event_update",
+   "fieldtype": "Data",
+   "label": "Event Update Template SID"
+  },
+  {
+   "fieldname": "twilio_template_qr_checkin",
+   "fieldtype": "Data",
+   "label": "QR/Check-in Template SID"
+  },
+  {
+   "fieldname": "twilio_template_thank_you",
+   "fieldtype": "Data",
+   "label": "Thank You Template SID"
+  },
+  {
+   "fieldname": "google_calendar_tab",
+   "fieldtype": "Tab Break",
+   "label": "Google Calendar"
+  },
+  {
+   "fieldname": "google_client_id",
+   "fieldtype": "Data",
+   "label": "Google Client ID"
+  },
+  {
+   "fieldname": "google_client_secret",
+   "fieldtype": "Password",
+   "label": "Google Client Secret"
+  },
+  {
+   "fieldname": "frontdesk_tab",
+   "fieldtype": "Tab Break",
+   "label": "Frontdesk"
+  },
+  {
+   "description": "Users with only this role will be redirected to the Frontdesk scanning page on login.",
+   "fieldname": "frontdesk_role",
+   "fieldtype": "Link",
+   "label": "Frontdesk Role",
+   "options": "Role"
   }
  ],
  "index_web_pages_for_search": 1,
