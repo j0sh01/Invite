@@ -25,6 +25,7 @@ def get_list(filters=None, limit=20, offset=0):
 		limit_start=offset,
 		limit_page_length=limit,
 		order_by="event_date DESC",
+		ignore_permissions=True,
 	)
 
 	total = frappe.db.count("Event", base_filters)

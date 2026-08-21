@@ -20,10 +20,11 @@ def get_list(event, filters=None, limit=50, offset=0):
 		filters=base_filters,
 		fields=["name", "guest", "guest_name", "invite_code", "invitation",
 			"checked_in_at", "checked_in_by", "check_in_method",
-			"number_of_attendees", "is_duplicate", "notes"],
+			"number_of_attendees", "is_duplicate"],
 		limit_page_length=limit,
 		limit_start=offset,
 		order_by="checked_in_at DESC",
+		ignore_permissions=True,
 	)
 
 	total = frappe.db.count("Check-In", base_filters)

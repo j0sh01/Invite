@@ -31,6 +31,7 @@ def get_logs(event=None, action_category=None, action_type=None,
 		limit_page_length=limit,
 		limit_start=offset,
 		order_by="creation DESC",
+		ignore_permissions=True,
 	)
 
 	total = frappe.db.count("Invite Activity Log", filters)

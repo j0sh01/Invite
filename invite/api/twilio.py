@@ -331,6 +331,11 @@ def list_content_templates():
 	"""
 	config = get_twilio_config()
 	if not config["enabled"]:
+		frappe.log_error(
+			"Cannot list templates: Twilio is not configured. "
+			"Ensure whatsapp_provider='Twilio', twilio_account_sid, and twilio_auth_token are set.",
+			"Twilio Integration",
+		)
 		return []
 
 	try:
