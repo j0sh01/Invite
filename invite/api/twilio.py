@@ -89,6 +89,7 @@ def send_whatsapp_message(to_number, message, media_url=None):
 		"Body": message,
 	}
 
+	with_media = False
 	if media_url:
 		# Twilio downloads the media from this URL on its own servers. A
 		# local-only host (e.g. http://mchango:8000) can never be fetched by
@@ -103,7 +104,12 @@ def send_whatsapp_message(to_number, message, media_url=None):
 				"host is not publicly reachable"
 			)
 			return False
-		payload["MediaUrl"] = media_url
+		# File URLs from Frappe keep raw spaces/parentheses (e.g.
+		# "/files/Pasted image (10).png"); Twilio's downloader chokes on
+		# unencoded characters and the message then fails with 63019 even
+		# though the file exists. Encode the path before handing it over.
+		payload["MediaUrl"] = _encode_media_url(media_url)
+		with_media = True
 
 	try:
 		response = requests.post(
@@ -121,7 +127,31 @@ def send_whatsapp_message(to_number, message, media_url=None):
 			# the sandbox fails asynchronously with 63015, media it cannot
 			# download with 63019). Confirm against the real message status so
 			# callers do not report a phantom "sent".
-			return _poll_message_status(result["sid"])
+			if _poll_message_status(result["sid"], timeout=15 if with_media else 8):
+				return True
+			# The media send settled on failed (bad file, unsupported type,
+			# download error) — never leave the guest without a message:
+			# retry the same text with no attachment.
+			if with_media:
+				frappe.logger().warning(
+					f"Twilio media message {result['sid']} to {to_number} failed; "
+					"retrying as plain text without the attachment"
+				)
+				text_payload = {
+					"From": from_number,
+					"To": to_number,
+					"Body": message,
+				}
+				retry = requests.post(
+					url,
+					data=text_payload,
+					auth=(config["account_sid"], config["auth_token"]),
+					timeout=30,
+				)
+				retry.raise_for_status()
+				retry_result = retry.json()
+				if retry_result.get("sid"):
+					return _poll_message_status(retry_result["sid"])
 		return False
 	except requests.exceptions.RequestException as e:
 		error_detail = str(e)
@@ -253,6 +283,25 @@ def _is_publicly_reachable_url(url):
 		):
 			return False
 	return True
+
+
+def _encode_media_url(url):
+	"""Percent-encode the path of a media URL for Twilio's downloader.
+
+	Frappe file URLs keep raw spaces and parentheses (e.g.
+	``/files/Pasted image (10).png``). Twilio's servers must fetch the URL
+	themselves and fail with 63019 on unencoded characters, so encode the
+	path while leaving the scheme/host and any query string intact.
+	"""
+	from urllib.parse import quote, urlsplit, urlunsplit
+
+	try:
+		parts = urlsplit(url)
+		path = quote(parts.path, safe="/%:@")
+		query = quote(parts.query, safe="=&%")
+		return urlunsplit((parts.scheme, parts.netloc, path, query, parts.fragment))
+	except Exception:
+		return url
 
 
 def send_template_message(to_number, content_sid, template_variables=None):
