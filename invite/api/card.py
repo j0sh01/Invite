@@ -20,6 +20,41 @@ _BUILTIN_TEMPLATE = {
 }
 
 
+def _render_pdf(html, options):
+	"""Render the invitation card HTML to a PDF via wkhtmltopdf.
+
+	The card HTML is fully self-contained (inline CSS, base64 images, no
+	print-format hooks), so it is rendered straight through wkhtmltopdf with
+	the same options frappe's ``get_pdf`` would use.
+
+	This intentionally bypasses ``frappe.utils.pdf.get_pdf``: that helper
+	resolves the site's print bundle CSS via ``get_assets_json()``, which
+	reads ``assets/assets.json`` relative to the process working directory.
+	That manifest only exists under the bench's ``sites/`` folder, so card
+	generation crashed with ``'NoneType' object has no attribute 'get'``
+	whenever the code ran from any other directory (console scripts, RQ
+	workers, freshly restarted bench processes).
+	"""
+	import pdfkit
+	from packaging.version import Version
+	from frappe.utils.pdf import get_wkhtmltopdf_version
+
+	options = dict(options or {})
+	options.update({
+		"print-media-type": None,
+		"background": None,
+		"images": None,
+		"quiet": None,
+		"encoding": "UTF-8",
+		"disable-javascript": "",
+		"disable-local-file-access": "",
+	})
+	if Version(get_wkhtmltopdf_version()) > Version("0.12.3"):
+		options["disable-smart-shrinking"] = ""
+
+	return pdfkit.from_string(html, options=options, verbose=True)
+
+
 @frappe.whitelist()
 def generate_invitation_card(invitation):
 	"""Generate a personalized invitation card PDF from the event's template.
@@ -35,8 +70,6 @@ def generate_invitation_card(invitation):
 
 	Requires the event to have an image uploaded.
 	"""
-	from frappe.utils.pdf import get_pdf
-
 	inv = frappe.get_doc("Invitation", invitation)
 	event = frappe.get_doc("Event", inv.event)
 
@@ -61,7 +94,7 @@ def generate_invitation_card(invitation):
 	# defaults to 15mm side margins unless overridden — a 297mm-tall card then
 	# overflows onto a second page. Pass explicit zero-margin A4 options so the
 	# card is always exactly one page.
-	pdf_content = get_pdf(html, options={
+	pdf_content = _render_pdf(html, {
 		"page-size": "A4",
 		"margin-top": "0mm",
 		"margin-bottom": "0mm",

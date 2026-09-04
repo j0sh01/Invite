@@ -434,7 +434,9 @@ async function generateBulkInvitations() {
   } catch (e) {
     console.error('Failed to generate invitations:', e)
     showProgressModal.value = false
-    sendResult.value = { error: true, message: e.message || 'Failed to generate invitations', sent: [], failed: [] }
+    // e.message is only "<url> <exc_type>" (e.g. "/api/method/... ValidationError");
+    // the real reason (e.g. "Please upload an Event Image...") is in e.messages.
+    sendResult.value = { error: true, message: e.messages?.[0] || e.message || 'Failed to generate invitations', sent: [], failed: [] }
     showSendResultModal.value = true
   } finally {
     generating.value = false
@@ -502,7 +504,7 @@ async function confirmSingleSend() {
     await loadInvitations()
   } catch (e) {
     console.error('Failed to send invitation:', e)
-    sendResult.value = { error: true, message: e.message || 'Failed to send invitation', sent: [], failed: [] }
+    sendResult.value = { error: true, message: e.messages?.[0] || e.message || 'Failed to send invitation', sent: [], failed: [] }
     showSendResultModal.value = true
   } finally {
     sending.value = false
