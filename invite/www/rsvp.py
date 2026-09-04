@@ -61,7 +61,11 @@ def _handle_rsvp_submission(context):
     form = frappe.local.form_dict
     invite_code = form.get("code", "").strip()
     status = form.get("status", "Accepted").strip()
-    attendees = int(form.get("attendees", 1))
+    try:
+        attendees = int(form.get("attendees") or 1)
+        attendees = max(1, min(100, attendees))
+    except (TypeError, ValueError):
+        attendees = 1
     message = form.get("message", "").strip()
 
     if not invite_code:

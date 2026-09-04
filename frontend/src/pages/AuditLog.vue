@@ -112,7 +112,7 @@ const totalLogs = ref(0)
 const loading = ref(false)
 const searchQuery = ref('')
 const categoryFilter = ref('')
-const actionFilter = ref([])
+const actionFilter = ref('')
 
 const categories = ref([])
 

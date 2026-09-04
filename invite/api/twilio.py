@@ -115,8 +115,13 @@ def send_whatsapp_message(to_number, message, media_url=None):
 		response.raise_for_status()
 		result = response.json()
 		if result.get("sid"):
-			frappe.logger().info(f"Twilio WhatsApp sent to {to_number}, SID: {result['sid']}")
-			return True
+			frappe.logger().info(f"Twilio WhatsApp accepted to {to_number}, SID: {result['sid']}")
+			# Twilio accepts the message and returns a SID even when the
+			# recipient can never receive it (e.g. a number that has not joined
+			# the sandbox fails asynchronously with 63015, media it cannot
+			# download with 63019). Confirm against the real message status so
+			# callers do not report a phantom "sent".
+			return _poll_message_status(result["sid"])
 		return False
 	except requests.exceptions.RequestException as e:
 		error_detail = str(e)
@@ -126,6 +131,55 @@ def send_whatsapp_message(to_number, message, media_url=None):
 			pass
 		frappe.log_error(f"Twilio WhatsApp send failed: {error_detail}", "Twilio Integration")
 		return False
+
+
+def _poll_message_status(message_sid, timeout=8):
+	"""Wait briefly for a Twilio message to leave the transient states.
+
+	A message Twilio just accepted is usually ``queued``; recipients that can
+	never receive it (not in the sandbox, bad number) settle on ``failed``
+	within a second or two. Poll until a terminal status appears:
+
+	- ``sent`` / ``delivered`` / ``read`` → True (deliverable)
+	- ``failed`` / ``undelivered`` → False (never delivered)
+	- still ``queued``/``accepted``/``sending`` after the timeout → True
+	  (assume normal delivery proceeds)
+	"""
+	import time
+
+	config = get_twilio_config()
+	url = f"https://api.twilio.com/2010-04-01/Accounts/{config['account_sid']}/Messages/{message_sid}.json"
+	deadline = time.time() + timeout
+	terminal_ok = {"sent", "delivered", "read"}
+	terminal_fail = {"failed", "undelivered"}
+
+	while time.time() < deadline:
+		try:
+			response = requests.get(
+				url,
+				auth=(config["account_sid"], config["auth_token"]),
+				timeout=10,
+			)
+			response.raise_for_status()
+			data = response.json()
+			status = (data or {}).get("status", "")
+			if status in terminal_ok:
+				frappe.logger().info(f"Twilio message {message_sid} status: {status}")
+				return True
+			if status in terminal_fail:
+				error_code = data.get("error_code") or ""
+				error_message = data.get("error_message") or ""
+				frappe.log_error(
+					f"Twilio message {message_sid} {status}: {error_code} {error_message}",
+					"Twilio Integration",
+				)
+				return False
+		except Exception:
+			pass
+		time.sleep(1)
+
+	frappe.logger().info(f"Twilio message {message_sid} still {status or 'transient'} after {timeout}s - assuming delivery proceeds")
+	return True
 
 
 def _get_template_variables(content_sid):
@@ -280,8 +334,9 @@ def send_template_message(to_number, content_sid, template_variables=None):
 		response.raise_for_status()
 		result = response.json()
 		if result.get("sid"):
-			frappe.logger().info(f"Twilio template sent to {to_number}, SID: {result['sid']}")
-			return True
+			frappe.logger().info(f"Twilio template accepted to {to_number}, SID: {result['sid']}")
+			# Same async-failure caveat as plain messages - confirm real status.
+			return _poll_message_status(result["sid"])
 		return False
 	except requests.exceptions.RequestException as e:
 		error_detail = str(e)

@@ -536,7 +536,11 @@ def send_reminders(event, channel=None, reminder_type="event"):
 
 
 def _send_event_reminders(event_doc, channel):
-	"""Send event reminders with invitation card attachment and RSVP link."""
+	"""Send event reminders with RSVP link (and card when one exists).
+
+	A guest is only reported as sent when the provider actually accepted the
+	message - failures are listed with a reason instead of silently counted.
+	"""
 	guests = frappe.get_all(
 		"Guest",
 		filters={"event": event_doc.name},
@@ -544,39 +548,41 @@ def _send_event_reminders(event_doc, channel):
 	)
 
 	base_url = get_url()
-	message = (
-		"Dear {guest_name}, you are invited to {event_name} on {event_date} at {venue}.\n\n"
-		"Please RSVP here: {rsvp_link}"
-	)
 	sent = []
 	failed = []
 
 	for guest in guests:
 		try:
-			rsvp_link = f"{base_url}/rsvp?code={guest.invite_code}"
-			personalized = message \
-				.replace("{guest_name}", guest.full_name or "Guest") \
-				.replace("{event_name}", event_doc.event_name) \
-				.replace("{event_date}", str(event_doc.event_date or "")) \
-				.replace("{venue}", event_doc.venue or "") \
-				.replace("{rsvp_link}", rsvp_link)
+			rsvp_link = f"{base_url}/rsvp?code={guest.invite_code}" if guest.invite_code else ""
+			message = (
+				f"Dear {guest.full_name or 'Guest'},\n\n"
+				f"This is a reminder that {event_doc.event_name} is on "
+				f"{event_doc.event_date} at {event_doc.venue}.\n\n"
+				f"Please RSVP here: {rsvp_link}"
+			)
 
-			# Find invitation card attachment
-			invitation = frappe.db.get_value("Invitation", {
-				"event": event_doc.name, "guest": guest.name
-			}, ["name", "personalized_invite_card"], as_dict=True)
+			# Attach the personalized card when one has already been generated
+			card_path = frappe.db.get_value(
+				"Invitation",
+				{"event": event_doc.name, "guest": guest.name},
+				"personalized_invite_card",
+			)
 
-			card_path = invitation.personalized_invite_card if invitation else None
-
-			if channel in (None, "Email") and guest.email:
-				_send_email(guest.email, f"Reminder: {event_doc.event_name}", personalized, card_path)
-				sent.append({"guest": guest.name, "channel": "Email"})
-
-			if channel in (None, "WhatsApp") and guest.mobile_no:
-				_send_whatsapp(guest.mobile_no, personalized, card_path, event_name=event_doc.name)
-				sent.append({"guest": guest.name, "channel": "WhatsApp"})
-
-			_log_notification(guest, event_doc, f"Reminder: {event_doc.event_name}")
+			sent_channels, send_failures = _dispatch_to_guest(
+				guest=guest,
+				event_doc=event_doc,
+				message=message,
+				subject=f"Reminder: {event_doc.event_name}",
+				channel=channel,
+				attachment_path=card_path,
+				template_type="event_reminder",
+				rsvp_link=rsvp_link,
+			)
+			failed.extend(send_failures)
+			for sc in sent_channels:
+				sent.append({"guest": guest.name, "channel": sc})
+			if sent_channels:
+				_log_notification(guest, event_doc, f"Reminder: {event_doc.event_name}")
 
 		except Exception as e:
 			failed.append({"guest": guest.name, "error": str(e)})
@@ -603,38 +609,52 @@ def _send_event_reminders(event_doc, channel):
 
 
 def _send_thank_you_messages(event_doc, channel):
-	"""Send thank you messages after event with event image."""
-	checked_in_guests = frappe.get_all(
+	"""Send thank you messages to every guest who checked in (once per guest)."""
+	# Deduplicate: a card covering multiple attendees can be scanned several
+	# times, but each guest should receive exactly one thank-you message.
+	checked_in_rows = frappe.get_all(
 		"Check-In",
 		filters={"event": event_doc.name, "is_duplicate": 0},
-		fields=["guest", "guest_name"],
+		fields=["guest"],
+		group_by="guest",
 	)
+	guest_ids = [r["guest"] for r in checked_in_rows]
+	guests = frappe.get_all(
+		"Guest",
+		filters={"name": ["in", guest_ids]},
+		fields=["name", "full_name", "email", "mobile_no"],
+	) if guest_ids else []
 
-	template = "Dear {guest_name}, thank you for attending {event_name}! We truly appreciate your presence."
 	sent = []
 	failed = []
 
-	for ci in checked_in_guests:
+	for guest in guests:
 		try:
-			guest = frappe.get_cached_doc("Guest", ci.guest)
-			personalized = template \
-				.replace("{guest_name}", guest.full_name or "Guest") \
-				.replace("{event_name}", event_doc.event_name)
+			message = (
+				f"Dear {guest.full_name or 'Guest'},\n\n"
+				f"Thank you for attending {event_doc.event_name}! "
+				"We truly appreciate your presence and hope you had a wonderful time."
+			)
 
-			if channel in (None, "Email") and guest.email:
-				_send_email(guest.email, f"Thank You: {event_doc.event_name}", personalized, event_doc.image)
-				sent.append({"guest": guest.name, "channel": "Email"})
-
-			if channel in (None, "WhatsApp") and guest.mobile_no:
-				_send_whatsapp(guest.mobile_no, personalized, event_doc.image, event_name=event_doc.name)
-				sent.append({"guest": guest.name, "channel": "WhatsApp"})
-
-			_log_notification(guest, event_doc, f"Thank you for joining {event_doc.event_name}!")
+			sent_channels, send_failures = _dispatch_to_guest(
+				guest=guest,
+				event_doc=event_doc,
+				message=message,
+				subject=f"Thank You: {event_doc.event_name}",
+				channel=channel,
+				attachment_path=event_doc.image or "",
+				template_type="thank_you",
+			)
+			failed.extend(send_failures)
+			for sc in sent_channels:
+				sent.append({"guest": guest.name, "channel": sc})
+			if sent_channels:
+				_log_notification(guest, event_doc, f"Thank you for joining {event_doc.event_name}!")
 
 		except Exception as e:
-			failed.append({"guest": ci.guest, "error": str(e)})
+			failed.append({"guest": guest.name, "error": str(e)})
 			frappe.log_error(
-				f"Thank you message failed for {ci.guest}: {frappe.get_traceback()}",
+				f"Thank you message failed for {guest.name}: {frappe.get_traceback()}",
 				"Send Reminder"
 			)
 
@@ -660,21 +680,99 @@ def _send_thank_you_messages(event_doc, channel):
 # ──────────────────────────────────────────────
 
 
+def _dispatch_to_guest(guest, event_doc, message, subject, channel,
+	attachment_path=None, template_type=None, rsvp_link=None):
+	"""Send one message to one guest over the requested channel.
+
+	``guest`` is a dict with ``name``/``full_name``/``email``/``mobile_no``.
+
+	Returns ``(sent_channels, failures)`` — the channels the provider actually
+	accepted ("Email"/"WhatsApp") and any per-guest failures with a reason,
+	so callers never count a message as sent when nothing was dispatched.
+	"""
+	sent_channels = []
+	failures = []
+	template_values = None
+	if template_type and guest.get("full_name"):
+		template_values = _template_values(guest.get("full_name"), event_doc, rsvp_link)
+
+	if channel in (None, "Email"):
+		if guest.get("email"):
+			if _send_email(guest["email"], subject, message, attachment_path):
+				sent_channels.append("Email")
+			else:
+				failures.append({"guest": guest.get("name"), "error": "Email could not be queued (check outbound email settings)"})
+		elif channel == "Email":
+			failures.append({"guest": guest.get("name"), "error": "Guest has no email address"})
+
+	if channel in (None, "WhatsApp"):
+		if guest.get("mobile_no"):
+			if _send_whatsapp(
+				guest["mobile_no"],
+				message,
+				attachment_url=attachment_path,
+				event_name=event_doc.name,
+				template_type=template_type,
+				template_values=template_values,
+			):
+				sent_channels.append("WhatsApp")
+			else:
+				provider = getattr(frappe.get_single("Event Settings"), "whatsapp_provider", "")
+				reason = "WhatsApp provider did not deliver the message"
+				if provider == "Twilio":
+					reason += (
+						" (Twilio accepted it but the recipient could not receive it - "
+						"e.g. the number has not joined the WhatsApp sandbox)"
+					)
+				failures.append({"guest": guest.get("name"), "error": reason})
+		elif channel == "WhatsApp":
+			failures.append({"guest": guest.get("name"), "error": "Guest has no mobile number"})
+
+	return sent_channels, failures
+
+
+def _template_values(guest_name, event_doc, rsvp_link=None):
+	"""Numbered (1-6) values for Twilio Content API templates.
+
+	The send helper maps these positionally onto the template's own named
+	variables and refuses to send when the template expects a different
+	number of variables, so a mismatched template falls back to plain text
+	instead of delivering wrong content.
+	"""
+	return {
+		"1": guest_name or "Guest",
+		"2": event_doc.event_name or "",
+		"3": str(event_doc.event_date or ""),
+		"4": str(event_doc.event_time or ""),
+		"5": event_doc.venue or "",
+		"6": rsvp_link or "",
+	}
+
+
 def _send_email(recipient, subject, message, attachment_path=None):
-	"""Queue an email with optional attachment (file URL)."""
+	"""Queue an email with optional attachment (file URL).
+
+	Returns True when the email was accepted into the outbound queue (it is
+	then delivered by Frappe's email queue, which requires an outgoing email
+	account to be configured on the site).
+	"""
 	import json
 	from frappe.email.doctype.email_queue.email_queue import EmailQueue
 
 	if not recipient:
-		return
+		return False
 
-	email_queue = EmailQueue.new({
-		"sender": frappe.session.user,
-		"recipients": [recipient],
-		"subject": subject,
-		"message": message,
-		"reference_doctype": "Event",
-	}, ignore_permissions=True)
+	try:
+		email_queue = EmailQueue.new({
+			"sender": frappe.session.user,
+			"recipients": [recipient],
+			"subject": subject,
+			"message": message,
+			"reference_doctype": "Event",
+		}, ignore_permissions=True)
+	except Exception as e:
+		frappe.log_error(f"Failed to queue email to {recipient}: {e}", "Send Email")
+		return False
 
 	if email_queue and attachment_path:
 		try:
@@ -684,108 +782,80 @@ def _send_email(recipient, subject, message, attachment_path=None):
 		except Exception as e:
 			frappe.log_error(f"Failed to attach file to email: {e}", "Send Email")
 
+	return True
 
-def _send_whatsapp(mobile_no, message, attachment_path=None, event_name=None):
-	"""Send WhatsApp message via configured provider (Official API or Twilio)."""
+
+def _send_whatsapp(mobile_no, message, attachment_url=None, event_name=None,
+	template_type=None, template_values=None):
+	"""Send a WhatsApp message via the configured provider.
+
+	Returns True only when the provider actually accepted the message:
+
+	- Twilio: the Content API template for ``template_type`` is tried first
+	  when a SID is configured. If the template send fails (wrong variable
+	  count, not approved, sandbox restrictions) it falls back to plain
+	  text. The card is attached only when its URL is publicly reachable by
+	  Twilio (never for local-only hosts like ``http://mchango:8000``).
+	- Official WhatsApp API: media message first, plain text fallback.
+	"""
 	mobile = str(mobile_no or "").strip()
-	message = message or ""
+	if not mobile:
+		return False
 
 	settings = frappe.get_single("Event Settings")
 	provider = getattr(settings, "whatsapp_provider", "")
 
-	api_sent = False
+	if provider == "Twilio":
+		from invite.api.twilio import (
+			send_whatsapp_message,
+			send_template_message,
+			get_template_sids,
+			_is_publicly_reachable_url,
+		)
 
-	if provider == "Official WhatsApp API" and mobile:
-		from invite.api.whatsapp import get_whatsapp_config, send_media_message, send_text_message
-		config = get_whatsapp_config()
-		if config["enabled"]:
-			if attachment_path:
-				if attachment_path.startswith("http"):
-					file_path = attachment_path
-				elif attachment_path.startswith("/"):
-					file_path = attachment_path
-				else:
-					file_path = f"/{attachment_path}"
-				if file_path.strip("/"):
-					success, _ = send_media_message(mobile, message, file_path)
-					api_sent = success
-			else:
-				success = send_text_message(mobile, message)
-				api_sent = success
+		template_sid = ""
+		if template_type:
+			template_sid = (get_template_sids().get(template_type) or "")
+		if template_sid and send_template_message(mobile, template_sid, template_values or {}):
+			return True
 
-	elif provider == "Twilio" and mobile:
-		from invite.api.twilio import send_whatsapp_message, send_template_message, get_template_sids
-		# Try Content API template first, fall back to plain text
-		template_type = _get_template_type_for_reminder(message)
-		tids = get_template_sids()
-		template_sid = tids.get(template_type, "") if template_type else ""
+		# Plain-text fallback; attach media only when Twilio can fetch it
+		media_url = None
+		if attachment_url:
+			full_url = attachment_url if attachment_url.startswith("http") else frappe.utils.get_url(attachment_url)
+			if _is_publicly_reachable_url(full_url):
+				media_url = full_url
+		return send_whatsapp_message(mobile, message, media_url=media_url)
 
-		if template_sid and template_type:
-			# Build template variables from message context
-			variables = _build_template_variables(message, template_type)
-			success = send_template_message(mobile, template_sid, variables)
-		else:
-			success = send_whatsapp_message(mobile, message, attachment_path)
-		api_sent = success
+	if provider in ("Official WhatsApp API", "Meta API"):
+		from invite.api.whatsapp import send_text_message, send_media_message
+		if attachment_url:
+			ok, _err = send_media_message(mobile, message, attachment_url)
+			if ok:
+				return True
+		return send_text_message(mobile, message)
 
-	# Always log the notification for audit trail
-	status = "API Sent" if api_sent else "Logged"
-	log_subject = f"WhatsApp [{status}]: {(message or '')[:80]}..."
-
-	frappe.get_doc({
-		"doctype": "Notification Log",
-		"subject": log_subject,
-		"email": mobile or "unknown",
-		"for_user": frappe.session.user,
-		"document_type": "Event",
-		"document_name": event_name or "",
-	}).insert(ignore_permissions=True)
-
-
-def _get_template_type_for_reminder(message):
-	"""Determine the template type based on message content."""
-	msg = (message or "").lower()
-	if "thank you" in msg or "appreciate" in msg:
-		return "thank_you"
-	elif "reminder" in msg:
-		return "event_reminder"
-	elif "rsvp" in msg and "confirm" in msg:
-		return "rsvp_confirmation"
-	elif "rsvp" in msg and "remind" in msg:
-		return "rsvp_reminder"
-	elif "invited" in msg or "invitation" in msg:
-		return "event_invitation"
-	elif "update" in msg or "changed" in msg:
-		return "event_update"
-	elif "check-in" in msg or "qr" in msg:
-		return "qr_checkin"
-	return None
-
-
-def _build_template_variables(message, template_type):
-	"""Build Content API template variables from message content.
-
-	Twilio Content API uses numbered variables (1, 2, 3...).
-	These map to template placeholders like {{1}}, {{2}}, etc.
-	"""
-	# Generic variables — the actual template in Twilio defines
-	# what {{1}}, {{2}}, etc. represent.
-	return {
-		"1": "Guest",
-		"2": "Event",
-		"3": "2026-12-31",
-		"4": "12:00 PM",
-		"5": "Venue",
-		"6": frappe.utils.get_url() + "/rsvp",
-	}
+	frappe.log_error(
+		f"WhatsApp send skipped for {mobile}: whatsapp_provider is '{provider}'",
+		"Send Communication",
+	)
+	return False
 
 
 def _log_notification(guest, event_doc, subject):
-	"""Log a notification for audit trail and push real-time update."""
+	"""Log a notification for audit trail and push real-time update.
+
+	Accepts both Guest documents and plain dicts (as returned by get_all).
+	"""
+	if isinstance(guest, dict):
+		contact = str(guest.get("email") or guest.get("mobile_no") or "").strip() or "unknown"
+	else:
+		contact = str(getattr(guest, "email", "") or getattr(guest, "mobile_no", "") or "").strip() or "unknown"
+
 	frappe.get_doc({
 		"doctype": "Notification Log",
 		"subject": subject,
-		"email": str(guest.email or guest.mobile_no or "").strip() or "unknown",
+		"email": contact,
 		"for_user": frappe.session.user,
 		"document_type": "Event",
 		"document_name": event_doc.name,

@@ -92,9 +92,26 @@ class Guest(Document):
 		)
 
 	def update_event_stats(self):
-		event = frappe.get_doc("Event", self.event)
-		event.update_statistics()
-		event.save(ignore_permissions=True)
+		"""Refresh the event's totals after any guest change.
+
+		Uses the same recompute + ``db_set`` path as ``Event.on_update``
+		instead of a full ``event.save()``: a save runs ``Event.validate`` →
+		``validate_dates``, which throws "Event date cannot be in the past"
+		for any event whose date has passed. That broke RSVP submissions,
+		check-ins and guest edits that legitimately happen on/after the event
+		day, because every one of them saves the guest → refreshes event stats.
+		"""
+		try:
+			event = frappe.get_doc("Event", self.event)
+			event.update_statistics()
+			event.persist_statistics()
+		except Exception:
+			# Statistics are cosmetic - never let a refresh failure block the
+			# actual guest operation that triggered it.
+			frappe.log_error(
+				f"Failed to refresh statistics for event {self.event}: {frappe.get_traceback()}",
+				"Guest Update",
+			)
 
 
 @frappe.whitelist()
