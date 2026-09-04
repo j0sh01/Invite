@@ -1,19 +1,26 @@
 <template>
-  <div class="flex items-center pr-3 border-b">
-    <div class="z-20 ml-2 flex items-center justify-center">
-      <Button
-        class="size-7"
-        variant="ghosted"
-        @click="sidebarOpened = !sidebarOpened"
+  <div
+    class="flex h-12 flex-shrink-0 items-center gap-2 border-b border-[#E7DCC7] bg-canvas px-3"
+  >
+    <button
+      class="grid size-9 place-items-center rounded-lg text-gray-700 transition-colors hover:bg-white"
+      @click="sidebarOpened = !sidebarOpened"
+    >
+      <FeatherIcon name="menu" class="size-5" />
+    </button>
+    <div class="flex items-center gap-2">
+      <div
+        class="grid size-6 place-items-center rounded-md bg-[#C75F2C] font-display text-[11px] font-bold text-[#FFF9EF]"
       >
-        <FeatherIcon name="menu" class="h-5 w-5 text-ink-gray-9" />
-      </Button>
+        I
+      </div>
+      <span class="font-display text-base font-semibold text-gray-900">Invite</span>
     </div>
-    <div id="app-header" class="flex-1" />
+    <div class="flex-1" />
   </div>
 </template>
 
 <script setup>
-import { FeatherIcon, Button } from 'frappe-ui'
+import { FeatherIcon } from 'frappe-ui'
 import { mobileSidebarOpened as sidebarOpened } from '@/composables/settings'
 </script>

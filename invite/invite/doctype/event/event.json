@@ -27,8 +27,11 @@
   "enable_reminders",
   "reminder_days_before",
   "qr_position",
+  "invitation_template",
   "enable_public_rsvp",
   "google_calendar_tab",
+  "sync_with_google_calendar",
+  "google_calendar",
   "google_calendar_event_id",
   "statistics_section",
   "total_guests",
@@ -155,6 +158,12 @@
    "options": "Left\nCenter\nRight"
   },
   {
+   "fieldname": "invitation_template",
+   "fieldtype": "Link",
+   "label": "Invitation Template",
+   "options": "Invitation Template"
+  },
+  {
    "default": "0",
    "fieldname": "enable_public_rsvp",
    "fieldtype": "Check",
@@ -164,6 +173,22 @@
    "fieldname": "google_calendar_tab",
    "fieldtype": "Tab Break",
    "label": "Google Calendar"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:false",
+   "fieldname": "sync_with_google_calendar",
+   "fieldtype": "Check",
+   "label": "Sync With Google Calendar",
+   "description": "Present for compatibility with Frappe's Google Calendar hooks; use the Google Calendar sync action instead"
+  },
+  {
+   "depends_on": "eval:false",
+   "fieldname": "google_calendar",
+   "fieldtype": "Link",
+   "label": "Google Calendar",
+   "options": "Google Calendar",
+   "description": "Present for compatibility with Frappe's Google Calendar hooks"
   },
   {
    "fieldname": "google_calendar_event_id",

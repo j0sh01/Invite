@@ -1,15 +1,15 @@
 <template>
-  <div class="max-w-7xl mx-auto">
-    <div class="flex items-center justify-between mb-6">
+  <div>
+    <EventWorkspaceHeader :event-id="props.eventId" />
+
+    <!-- Content toolbar -->
+    <div class="mb-5 mt-8 flex flex-wrap items-center justify-between gap-3">
       <div>
-        <h1 class="text-xl sm:text-2xl font-semibold text-gray-900">Reports</h1>
-        <p class="text-sm text-gray-500 mt-1">Event summary and analytics</p>
+        <h2 class="font-display text-xl text-gray-900">Reports</h2>
+        <p class="mt-0.5 text-sm text-gray-500">Event summary and analytics</p>
       </div>
       <Button @click="exportGuests" variant="ghost" size="sm" iconLeft="download" :label="__('Export Guests')" />
     </div>
-
-    <!-- Sub-navigation Tabs -->
-    <EventTabs :eventId="props.eventId" />
 
     <div v-if="loading" class="text-center py-12 text-gray-500">Loading report data...</div>
 
@@ -58,7 +58,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { frappeRequest } from '@/utils/api'
-import EventTabs from '@/components/EventTabs.vue'
+import EventWorkspaceHeader from '@/components/EventWorkspaceHeader.vue'
 
 const props = defineProps({ eventId: String })
 const loading = ref(true)

@@ -5,6 +5,50 @@ import frappe
 from frappe.utils import today, add_days, getdate, now
 
 
+def update_event_statuses():
+	"""Auto-advance event statuses based on the calendar.
+
+	- Events happening today move to 'Ongoing' (unless already further along).
+	- Events whose date has passed move to 'Completed'.
+	- 'Cancelled' events are never touched.
+	"""
+	# Events happening today: Planning / Invitations Sent / RSVPs Open -> Ongoing
+	today_events = frappe.get_all(
+		"Event",
+		filters={
+			"event_date": today(),
+			"event_status": ["in", ["Planning", "Invitations Sent", "RSVPs Open"]],
+		},
+		pluck="name",
+	)
+	for event_name in today_events:
+		try:
+			frappe.get_doc("Event", event_name).auto_update_status("Ongoing")
+		except Exception:
+			frappe.log_error(
+				f"Failed to auto-advance status for {event_name}: {frappe.get_traceback()}",
+				"Invite Auto Status"
+			)
+
+	# Events with a past date: -> Completed
+	past_events = frappe.get_all(
+		"Event",
+		filters={
+			"event_date": ["<", today()],
+			"event_status": ["not in", ["Completed", "Cancelled"]],
+		},
+		pluck="name",
+	)
+	for event_name in past_events:
+		try:
+			frappe.get_doc("Event", event_name).auto_update_status("Completed")
+		except Exception:
+			frappe.log_error(
+				f"Failed to auto-complete {event_name}: {frappe.get_traceback()}",
+				"Invite Auto Status"
+			)
+
+
 def send_reminder_notifications():
 	"""Send daily reminders for events happening soon."""
 	reminder_date = add_days(today(), 3)

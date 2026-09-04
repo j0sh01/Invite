@@ -44,7 +44,30 @@ class Guest(Document):
 				frappe.throw(f"A guest with mobile number {self.mobile_no} already exists in this event.")
 
 	def on_update(self):
+		self.sync_unsent_invitation_contacts()
 		self.update_event_stats()
+
+	def sync_unsent_invitation_contacts(self):
+		"""When a guest's mobile number changes, point every invitation that has
+		not been delivered yet (Draft/Ready/Failed) at the new number, so retries
+		and pending sends reach the corrected number instead of the old one."""
+		if not self.mobile_no:
+			return
+
+		before = self.get_doc_before_save()
+		if before and before.mobile_no == self.mobile_no:
+			return
+
+		frappe.db.set_value(
+			"Invitation",
+			{
+				"guest": self.name,
+				"status": ["in", ["Draft", "Ready", "Failed"]],
+			},
+			"recipient_contact",
+			self.mobile_no,
+			update_modified=False,
+		)
 
 	def update_event_stats(self):
 		event = frappe.get_doc("Event", self.event)
@@ -94,6 +117,22 @@ def get_event_guests(event, **kwargs):
 				"checked_in", "invitation_status", "number_of_attendees"],
 		order_by="creation ASC",
 	)
+
+	# Per-guest scan progress: how many of their allowed scans have been used
+	# (number_of_attendees = how many people the card covers, i.e. how many
+	# times it may be scanned — 1 for single, 2 for double entry, etc.)
+	counts = dict(
+		frappe.db.get_all(
+			"Check-In",
+			filters={"event": event, "is_duplicate": 0},
+			fields=["guest", "count(*) as total"],
+			group_by="guest",
+			as_list=True,
+		)
+	)
+	for g in guests:
+		g["scans_used"] = counts.get(g["name"], 0)
+		g["scans_allowed"] = g.get("number_of_attendees") or 1
 
 	return {
 		"guests": guests,

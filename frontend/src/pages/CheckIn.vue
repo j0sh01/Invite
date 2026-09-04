@@ -1,14 +1,14 @@
 <template>
-  <div class="max-w-7xl mx-auto">
-    <div class="flex items-center justify-between mb-6">
+  <div>
+    <EventWorkspaceHeader :event-id="props.eventId" />
+
+    <!-- Content toolbar -->
+    <div class="mb-5 mt-8 flex flex-wrap items-center justify-between gap-3">
       <div>
-        <h1 class="text-xl sm:text-2xl font-semibold text-gray-900">Check-In</h1>
-        <p class="text-sm text-gray-500 mt-1">{{ stats.unique_checkins || 0 }} / {{ stats.total_guests || 0 }} guests checked in</p>
+        <h2 class="font-display text-xl text-gray-900">Check-In</h2>
+        <p class="mt-0.5 text-sm text-gray-500">{{ stats.unique_checkins || 0 }} / {{ stats.total_guests || 0 }} guests checked in</p>
       </div>
     </div>
-
-    <!-- Sub-navigation Tabs -->
-    <EventTabs :eventId="props.eventId" />
 
     <!-- Stats -->
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
@@ -118,8 +118,11 @@
               <p v-if="checkinResult?.guest_name" class="text-xs text-gray-500 mt-1">
                 Guest: {{ checkinResult?.guest_name }}
               </p>
+              <p v-if="checkinResult?.scans_allowed && checkinResult.scans_allowed > 1" class="text-xs font-medium text-blue-600 mt-1">
+                Scan {{ checkinResult.scans_used }} of {{ checkinResult.scans_allowed }} — card covers {{ checkinResult.scans_allowed }} people
+              </p>
               <p v-if="checkinResult?.is_duplicate" class="text-xs text-amber-600 mt-1">
-                ⚠ Duplicate scan — guest was already checked in.
+                ⚠ Duplicate scan — this card's {{ checkinResult.scans_allowed || 1 }} allowed scan(s) have already been used.
               </p>
             </div>
           </div>
@@ -162,7 +165,7 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { frappeRequest } from '@/utils/api'
-import EventTabs from '@/components/EventTabs.vue'
+import EventWorkspaceHeader from '@/components/EventWorkspaceHeader.vue'
 import QrScanner from '@/components/QrScanner.vue'
 
 const props = defineProps({ eventId: String })
@@ -257,6 +260,8 @@ async function processQR() {
       message: result.is_duplicate ? 'Guest was already checked in.' : 'Guest has been checked in.',
       guest_name: result.guest_name,
       is_duplicate: result.is_duplicate,
+      scans_used: result.scans_used,
+      scans_allowed: result.scans_allowed,
     }
     showResultModal.value = true
     qrInput.value = ''
@@ -286,6 +291,8 @@ async function checkInGuest(guestId, guestName) {
         message: result.is_duplicate ? 'Guest was already checked in.' : 'Guest has been checked in.',
         guest_name: result.guest_name || guestName,
         is_duplicate: result.is_duplicate,
+        scans_used: result.scans_used,
+        scans_allowed: result.scans_allowed,
       }
       showResultModal.value = true
       searchQuery.value = ''

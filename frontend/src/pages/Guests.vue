@@ -1,9 +1,12 @@
 <template>
-  <div class="max-w-7xl mx-auto">
-    <div class="flex items-center justify-between mb-6">
+  <div>
+    <EventWorkspaceHeader :event-id="props.eventId" />
+
+    <!-- Content toolbar -->
+    <div class="mb-5 mt-8 flex flex-wrap items-center justify-between gap-3">
       <div>
-        <h1 class="text-xl sm:text-2xl font-semibold text-gray-900">Guests</h1>
-        <p class="text-sm text-gray-500 mt-1">{{ totalGuests }} guests for this event</p>
+        <h2 class="font-display text-xl text-gray-900">Guests</h2>
+        <p class="mt-0.5 text-sm text-gray-500">{{ totalGuests }} guests for this event</p>
       </div>
       <div class="flex gap-2">
         <Button @click="showImportModal = true" variant="ghost" size="sm" iconLeft="upload" :label="__('Import')" class="hidden sm:inline-flex" />
@@ -11,9 +14,6 @@
         <Button @click="showAddModal = true" variant="solid" size="sm" iconLeft="plus" :label="__('Add Guest')" />
       </div>
     </div>
-
-    <!-- Sub-navigation Tabs -->
-    <EventTabs :eventId="props.eventId" />
 
     <!-- Search & Filters -->
     <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4">
@@ -38,7 +38,7 @@
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Category</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">Attendees</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">Card Scans</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">RSVP</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
               <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase hidden sm:table-cell">QR</th>
@@ -59,7 +59,10 @@
                 <span class="text-sm text-gray-600">{{ guest.category || '-' }}</span>
               </td>
               <td class="px-4 py-3 hidden lg:table-cell">
-                <span class="text-sm text-gray-600">{{ guest.number_of_attendees || 1 }}</span>
+                <span class="text-sm text-gray-600">{{ guest.number_of_attendees || 1 }} entr{{ (guest.number_of_attendees || 1) === 1 ? 'y' : 'ies' }}</span>
+                <span v-if="guest.scans_used" class="ml-1 text-xs" :class="(guest.scans_used >= (guest.scans_allowed || 1)) ? 'text-red-500' : 'text-green-600'">
+                  · {{ guest.scans_used }}/{{ guest.scans_allowed || 1 }} used
+                </span>
               </td>
               <td class="px-4 py-3">
                 <span :class="rsvpBadgeClass(guest.rsvp_status)" class="text-xs px-2 py-1 rounded-full">
@@ -108,7 +111,8 @@
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormControl label="Phone" v-model="newGuest.phone" />
-            <FormControl label="Number of Attendees" type="number" v-model="newGuest.number_of_attendees" />
+            <FormControl label="Card Scans (people covered)" type="number" v-model="newGuest.number_of_attendees" />
+            <p class="text-xs text-gray-400 -mt-2">How many people this card covers — the card can be scanned this many times (1 = single, 2 = double entry).</p>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormControl label="Category" type="select" v-model="newGuest.category" :options="categoryOptionsForEdit" />
@@ -140,7 +144,8 @@
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormControl label="Phone" v-model="editGuestForm.phone" />
-            <FormControl label="Number of Attendees" type="number" v-model="editGuestForm.number_of_attendees" />
+            <FormControl label="Card Scans (people covered)" type="number" v-model="editGuestForm.number_of_attendees" />
+            <p class="text-xs text-gray-400 -mt-2">How many people this card covers — the card can be scanned this many times (1 = single, 2 = double entry).</p>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormControl label="Category" type="select" v-model="editGuestForm.category" :options="categoryOptionsForEdit" />
@@ -250,7 +255,10 @@
               Code: {{ selectedGuest.invite_code }}
             </p>
             <p class="text-xs text-gray-400 mt-1">
-              Attendees: {{ selectedGuest.number_of_attendees || 1 }}
+              Card scans allowed: {{ selectedGuest.number_of_attendees || 1 }}
+              <span v-if="selectedGuest.scans_used" :class="selectedGuest.scans_used >= (selectedGuest.scans_allowed || 1) ? 'text-red-500' : 'text-green-600'">
+                · {{ selectedGuest.scans_used }}/{{ selectedGuest.scans_allowed || 1 }} used
+              </span>
             </p>
           </div>
         </div>
@@ -266,7 +274,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { frappeRequest } from '@/utils/api'
-import EventTabs from '@/components/EventTabs.vue'
+import EventWorkspaceHeader from '@/components/EventWorkspaceHeader.vue'
 
 const props = defineProps({ eventId: String })
 

@@ -90,6 +90,19 @@ def send_whatsapp_message(to_number, message, media_url=None):
 	}
 
 	if media_url:
+		# Twilio downloads the media from this URL on its own servers. A
+		# local-only host (e.g. http://mchango:8000) can never be fetched by
+		# Twilio: the API still accepts the message and returns a SID, but
+		# delivery then fails asynchronously with error 63019 ("Media failed
+		# to download"). Detect that up front and bail out so the caller's
+		# fallback chain (template → plain text) runs instead of silently
+		# dropping the message.
+		if not _is_publicly_reachable_url(media_url):
+			frappe.logger().info(
+				f"Skipping Twilio media attachment {media_url} for {to_number}: "
+				"host is not publicly reachable"
+			)
+			return False
 		payload["MediaUrl"] = media_url
 
 	try:
@@ -113,6 +126,79 @@ def send_whatsapp_message(to_number, message, media_url=None):
 			pass
 		frappe.log_error(f"Twilio WhatsApp send failed: {error_detail}", "Twilio Integration")
 		return False
+
+
+def _get_template_variables(content_sid):
+	"""Fetch a Content API template's variable names, cached per SID.
+
+	The Content API renders placeholders by NAME ({{first_name}}), while the
+	app historically sent numbered variables ({{1}}, {{2}}...). Knowing the
+	template's variable names lets callers map values positionally so any
+	well-formed template renders correctly.
+
+	Returns a dict of variable-name → default value, or {} when the schema
+	could not be fetched (callers then fall back to legacy behaviour).
+	"""
+	cache_key = f"twilio_template_vars:{content_sid}"
+	cached = frappe.cache().get_value(cache_key)
+	if cached is not None:
+		return cached
+
+	config = get_twilio_config()
+	try:
+		response = requests.get(
+			f"https://content.twilio.com/v1/Content/{content_sid}",
+			auth=(config["account_sid"], config["auth_token"]),
+			timeout=15,
+		)
+		response.raise_for_status()
+		data = response.json()
+		variables = {}
+		for t in (data.get("types") or {}).values():
+			variables.update(t.get("variables") or {})
+		if not variables:
+			variables = data.get("variables") or {}
+		frappe.cache().set_value(cache_key, variables, expires_in_sec=3600)
+		return variables
+	except Exception:
+		return {}
+
+
+def _is_publicly_reachable_url(url):
+	"""Best-effort check that a media URL can be fetched from the public internet.
+
+	Twilio WhatsApp attachments must be downloadable by Twilio's servers, so
+	the host has to resolve publicly. Local-only hosts — ``localhost``, bare
+	hostnames with no dot (e.g. ``mchango``), and private/reserved IPs — can
+	never be reached by Twilio and would fail with error 63019 after the
+	message is accepted.
+	"""
+	import re
+	from urllib.parse import urlparse
+
+	try:
+		host = (urlparse(url).hostname or "").lower().rstrip(".")
+	except Exception:
+		return False
+	if not host:
+		return False
+	if host == "localhost" or host.endswith(".local"):
+		return False
+	# A bare hostname without a dot ("mchango") is not a public DNS name.
+	if "." not in host:
+		return False
+	# Private / reserved IP ranges (10.x, 127.x, 169.254.x, 172.16-31.x, 192.168.x)
+	if re.match(r"^\d{1,3}(\.\d{1,3}){3}$", host):
+		parts = host.split(".")
+		first, second = int(parts[0]), int(parts[1])
+		if (
+			first in (0, 10, 127)
+			or (first == 169 and second == 254)
+			or (first == 172 and 16 <= second <= 31)
+			or (first == 192 and second == 168)
+		):
+			return False
+	return True
 
 
 def send_template_message(to_number, content_sid, template_variables=None):
@@ -152,10 +238,37 @@ def send_template_message(to_number, content_sid, template_variables=None):
 		"ContentSid": content_sid,
 	}
 
-	# Add template variables if provided
+	# Add template variables if provided.
+	# Variables are JSON-encoded for Twilio's Content API. DB values can arrive
+	# as non-JSON types (e.g. Time fields come back as datetime.timedelta), so
+	# coerce every value to a string before encoding.
 	if template_variables:
 		import json
-		payload["ContentVariables"] = json.dumps(template_variables)
+		safe_variables = {
+			str(key): (str(value) if not isinstance(value, str) else value)
+			for key, value in template_variables.items()
+		}
+		# Twilio's Content API renders placeholders by NAME ({{first_name}}),
+		# not the numbered {{1}}/{{2}} convention of the old WhatsApp
+		# Templates. Fetch the template's variable names and map our values
+		# onto them positionally so any well-formed template renders correctly.
+		schema = _get_template_variables(content_sid)
+		if schema:
+			names = list(schema.keys())
+			values = [safe_variables[k] for k in sorted(safe_variables, key=int)]
+			if len(names) != len(values):
+				frappe.logger().warning(
+					f"Template {content_sid} expects {len(names)} variable(s) "
+					f"({', '.join(names)}) but {len(values)} value(s) were provided; "
+					"falling back to plain text instead of sending wrong content."
+				)
+				return False
+			payload["ContentVariables"] = json.dumps(dict(zip(names, values)))
+		else:
+			# Template schema could not be fetched — send the numbered
+			# variables as before (works for templates whose variables are
+			# literally named 1, 2, 3...).
+			payload["ContentVariables"] = json.dumps(safe_variables)
 
 	try:
 		response = requests.post(

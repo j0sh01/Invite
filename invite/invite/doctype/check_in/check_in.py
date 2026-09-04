@@ -43,6 +43,14 @@ class CheckIn(Document):
 		if existing_count >= allowed:
 			self.is_duplicate = 1
 
+	def on_update(self):
+		"""Advance the event status once guests start checking in."""
+		if not self.is_duplicate and self.event:
+			try:
+				frappe.get_doc("Event", self.event).auto_update_status("Ongoing")
+			except Exception:
+				pass
+
 	def update_guest_checkin(self):
 		"""Update guest record with check-in info (only for non-duplicate scans)."""
 		if self.guest:
@@ -92,6 +100,9 @@ def scan_qr():
 	checkin.check_in_method = "QR Code Scan"
 	checkin.insert(ignore_permissions=True)
 
+	scans_used = _count_scans(event, invitation.guest)
+	scans_allowed = checkin.number_of_attendees or 1
+
 	# Audit log
 	if checkin.is_duplicate:
 		_action_type = "Duplicate Scan"
@@ -119,6 +130,8 @@ def scan_qr():
 		"checked_in_at": str(checkin.checked_in_at),
 		"is_duplicate": checkin.is_duplicate,
 		"number_of_attendees": checkin.number_of_attendees,
+		"scans_used": scans_used,
+		"scans_allowed": scans_allowed,
 	}
 
 
@@ -160,6 +173,9 @@ def manual_checkin(event, guest=None, invite_code=None):
 	checkin.check_in_method = "Manual Entry" if guest else "Invite Code"
 	checkin.insert(ignore_permissions=True)
 
+	scans_used = _count_scans(event, guest_doc.name)
+	scans_allowed = checkin.number_of_attendees or 1
+
 	# Audit log
 	if checkin.is_duplicate:
 		_action_type = "Duplicate Scan"
@@ -187,7 +203,17 @@ def manual_checkin(event, guest=None, invite_code=None):
 		"checked_in_at": str(checkin.checked_in_at),
 		"is_duplicate": checkin.is_duplicate,
 		"number_of_attendees": checkin.number_of_attendees,
+		"scans_used": scans_used,
+		"scans_allowed": scans_allowed,
 	}
+
+
+def _count_scans(event, guest):
+	"""Count non-duplicate (accepted) check-in scans for a guest in an event."""
+	return frappe.db.count(
+		"Check-In",
+		{"guest": guest, "event": event, "is_duplicate": 0},
+	)
 
 
 @frappe.whitelist()

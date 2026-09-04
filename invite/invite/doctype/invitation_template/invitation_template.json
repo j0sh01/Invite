@@ -1,0 +1,170 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:template_name",
+ "creation": "2026-09-03 10:00:00.000000",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "details_section",
+  "template_name",
+  "title",
+  "layout",
+  "enabled",
+  "is_default",
+  "design_section",
+  "primary_color",
+  "accent_color",
+  "image_position",
+  "qr_position",
+  "wording_section",
+  "invitation_message",
+  "preview_section",
+  "preview_image"
+ ],
+ "fields": [
+  {
+   "fieldname": "details_section",
+   "fieldtype": "Section Break",
+   "label": "Template Details"
+  },
+  {
+   "fieldname": "template_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Template Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Title",
+   "reqd": 1
+  },
+  {
+   "default": "Classic",
+   "fieldname": "layout",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Layout",
+   "options": "Classic\nElegant\nModern\nMinimal"
+  },
+  {
+   "default": "1",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled"
+  },
+  {
+   "fieldname": "is_default",
+   "fieldtype": "Check",
+   "label": "Default Template"
+  },
+  {
+   "fieldname": "design_section",
+   "fieldtype": "Section Break",
+   "label": "Design"
+  },
+  {
+   "default": "#8F3B1C",
+   "fieldname": "primary_color",
+   "fieldtype": "Color",
+   "label": "Primary Color"
+  },
+  {
+   "default": "#C9A227",
+   "fieldname": "accent_color",
+   "fieldtype": "Color",
+   "label": "Accent Color"
+  },
+  {
+   "default": "Top",
+   "fieldname": "image_position",
+   "fieldtype": "Select",
+   "label": "Image Position",
+   "options": "Top\nLeft\nRight\nCover"
+  },
+  {
+   "default": "Bottom Right",
+   "fieldname": "qr_position",
+   "fieldtype": "Select",
+   "label": "QR Code Position",
+   "options": "Bottom Right\nBottom Left\nTop Right\nSide Right"
+  },
+  {
+   "fieldname": "wording_section",
+   "fieldtype": "Section Break",
+   "label": "Invitation Wording"
+  },
+  {
+   "description": "Placeholders: {guest_name}, {event_name}, {event_date}, {event_time}, {venue}",
+   "fieldname": "invitation_message",
+   "fieldtype": "Text",
+   "label": "Invitation Message"
+  },
+  {
+   "fieldname": "preview_section",
+   "fieldtype": "Section Break",
+   "label": "Preview"
+  },
+  {
+   "fieldname": "preview_image",
+   "fieldtype": "Attach Image",
+   "label": "Preview Image"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-09-03 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Invite",
+ "name": "Invitation Template",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Event Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "All",
+   "share": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "search_fields": "template_name,title",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "title",
+ "track_changes": 1
+}

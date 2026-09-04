@@ -90,6 +90,11 @@ const authRoutes = [
     name: 'AppSettings',
     component: () => import('@/pages/AppSettings.vue'),
   },
+  {
+    path: '/templates',
+    name: 'Templates',
+    component: () => import('@/pages/Templates.vue'),
+  },
 ]
 
 const routes = [

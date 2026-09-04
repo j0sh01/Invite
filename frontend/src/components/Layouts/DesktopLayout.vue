@@ -1,12 +1,18 @@
 <template>
-  <div class="flex h-screen w-screen">
-    <div class="h-full border-r bg-surface-menu-bar flex-shrink-0">
+  <div class="flex h-screen w-screen overflow-hidden bg-canvas">
+    <aside
+      class="flex h-full flex-shrink-0 flex-col border-r border-hairline bg-paper transition-[width] duration-300 ease-in-out"
+      :class="isSidebarCollapsed ? 'w-[64px]' : 'w-[236px]'"
+    >
       <AppSidebar />
-    </div>
-    <div class="flex-1 flex flex-col h-full overflow-auto bg-surface-white">
+    </aside>
+
+    <div class="flex min-w-0 flex-1 flex-col">
       <AppHeader @toggle-sidebar="toggleSidebar" />
-      <main class="flex-1 p-6">
-        <slot />
+      <main class="flex-1 overflow-y-auto">
+        <div class="mx-auto w-full max-w-page px-4 py-6 sm:px-7 sm:py-8">
+          <slot />
+        </div>
       </main>
     </div>
   </div>
@@ -17,7 +23,6 @@ import { provide, ref, watch } from 'vue'
 import AppSidebar from '@/components/Layouts/AppSidebar.vue'
 import AppHeader from '@/components/Layouts/AppHeader.vue'
 
-// Sidebar collapse state (persisted to localStorage)
 const isSidebarCollapsed = ref(false)
 try {
   const stored = localStorage.getItem('isSidebarCollapsed')
@@ -26,14 +31,12 @@ try {
   }
 } catch (e) { /* localStorage may not be available */ }
 
-// Persist changes
 watch(isSidebarCollapsed, (val) => {
   try {
     localStorage.setItem('isSidebarCollapsed', val)
   } catch (e) { /* localStorage may not be available */ }
 })
 
-// Provide state to children (AppSidebar, AppHeader)
 provide('isSidebarCollapsed', isSidebarCollapsed)
 
 function toggleSidebar() {

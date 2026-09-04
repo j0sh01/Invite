@@ -1,17 +1,19 @@
 <template>
-  <div class="bg-white rounded-lg border mb-6 overflow-x-auto">
-    <div class="flex flex-nowrap min-w-0">
-      <button
-        v-for="tab in eventTabs"
-        :key="tab.route"
-        @click="navigate(tab.route)"
-        class="flex items-center gap-1.5 px-3 sm:px-4 py-3 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap"
-        :class="isActiveTab(tab.route) ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-      >
-        <FeatherIcon :name="tab.icon" class="h-4 w-4" />
-        {{ tab.label }}
-      </button>
-    </div>
+  <div class="flex flex-nowrap items-center gap-1 overflow-x-auto rounded-xl border border-[#E7DCC7] bg-paper p-1">
+    <button
+      v-for="tab in eventTabs"
+      :key="tab.route"
+      @click="navigate(tab.route)"
+      class="flex flex-shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition-colors sm:px-4 sm:text-[13px]"
+      :class="
+        isActiveTab(tab.route)
+          ? 'bg-[#FBF2EC] text-[#8F3B1C] shadow-sm'
+          : 'text-gray-500 hover:bg-[#F8F2E6] hover:text-gray-800'
+      "
+    >
+      <FeatherIcon :name="tab.icon" class="size-4" />
+      {{ tab.label }}
+    </button>
   </div>
 </template>
 
@@ -35,7 +37,7 @@ const eventTabs = [
   { label: 'Guests', icon: 'users', route: '/guests' },
   { label: 'Invitations', icon: 'mail', route: '/invitations' },
   { label: 'Check-In', icon: 'camera', route: '/checkin' },
-  { label: 'Audit Log', icon: 'file-text', route: '/audit-log' },
+  { label: 'Audit Log', icon: 'clipboard', route: '/audit-log' },
   { label: 'Reports', icon: 'bar-chart-2', route: '/reports' },
   { label: 'Settings', icon: 'settings', route: '/settings' },
 ]

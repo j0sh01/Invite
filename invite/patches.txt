@@ -5,3 +5,4 @@
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
 invite.patches.fix_guest_contributions
+invite.patches.seed_invitation_templates

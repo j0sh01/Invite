@@ -1,13 +1,24 @@
 <template>
-  <div class="max-w-7xl mx-auto">
-    <div class="flex items-center justify-between mb-6">
-      <div>
-        <h1 class="text-xl sm:text-2xl font-semibold text-gray-900">Audit Log</h1>
-        <p class="text-sm text-gray-500 mt-1">{{ totalLogs }} activities recorded</p>
-      </div>
-      <div class="flex gap-2">
+  <div>
+    <!-- Global audit log (no event context) -->
+    <template v-if="!props.eventId">
+      <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 class="font-display text-3xl text-gray-900">Audit Log</h1>
+          <p class="mt-2 text-sm text-gray-500">Every action across your events, in one timeline</p>
+        </div>
         <Button @click="exportLogs" variant="ghost" size="sm" iconLeft="download" :label="__('Export')" />
       </div>
+    </template>
+
+    <!-- Event-scoped audit log keeps the event header + tabs above -->
+    <EventWorkspaceHeader v-if="props.eventId" :event-id="props.eventId" />
+    <div v-if="props.eventId" class="mb-5 mt-8 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h2 class="font-display text-xl text-gray-900">Audit Log</h2>
+        <p class="mt-0.5 text-sm text-gray-500">{{ totalLogs }} activities recorded</p>
+      </div>
+      <Button @click="exportLogs" variant="ghost" size="sm" iconLeft="download" :label="__('Export')" />
     </div>
 
     <!-- Filters -->
@@ -92,6 +103,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { frappeRequest } from '@/utils/api'
+import EventWorkspaceHeader from '@/components/EventWorkspaceHeader.vue'
 
 const props = defineProps({ eventId: { type: String, default: null } })
 

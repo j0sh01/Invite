@@ -1,9 +1,12 @@
 <template>
-  <div class="max-w-7xl mx-auto">
-    <div class="flex items-center justify-between mb-6">
+  <div>
+    <EventWorkspaceHeader :event-id="props.eventId" />
+
+    <!-- Content toolbar -->
+    <div class="mb-5 mt-8 flex flex-wrap items-center justify-between gap-3">
       <div>
-        <h1 class="text-xl sm:text-2xl font-semibold text-gray-900">Invitations</h1>
-        <p class="text-sm text-gray-500 mt-1">{{ totalInvitations }} invitations · {{ sentCount }} sent</p>
+        <h2 class="font-display text-xl text-gray-900">Invitations</h2>
+        <p class="mt-0.5 text-sm text-gray-500">{{ totalInvitations }} invitations · {{ sentCount }} sent</p>
       </div>
       <div class="flex gap-2">
         <Button @click="generateBulkInvitations" variant="ghost" size="sm" :loading="generating" iconLeft="zap" :label="__('Generate')" class="hidden sm:inline-flex" />
@@ -11,9 +14,6 @@
         <Button @click="sendBulk" variant="solid" size="sm" iconLeft="send" :label="__('Send All')" />
       </div>
     </div>
-
-    <!-- Sub-navigation Tabs -->
-    <EventTabs :eventId="props.eventId" />
 
     <!-- Bulk Send Modal -->
     <Dialog :options="{ title: 'Send Invitations' }" v-model="showSendModal">
@@ -44,6 +44,57 @@
         <Button @click="sendWithMedium" variant="solid" size="sm" :loading="sending" :disabled="!selectedMedium">
           Send via {{ selectedMedium || '...' }}
         </Button>
+      </template>
+    </Dialog>
+
+    <!-- Card Generation Progress Modal -->
+    <Dialog :options="{ title: 'Generating Invitation Cards', size: 'lg' }" v-model="showProgressModal" :dismissible="progressFinished">
+      <template #body-content>
+        <div class="space-y-4">
+          <!-- Live progress while generating -->
+          <div v-if="!progressFinished">
+            <div class="flex items-center justify-between mb-2">
+              <p class="text-sm text-gray-600">Generating personalized cards…</p>
+              <p class="text-sm font-medium text-gray-900">{{ progressState.done }} / {{ progressState.total || '…' }}</p>
+            </div>
+            <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div class="h-full bg-blue-600 transition-all duration-300" :style="{ width: progressPercent + '%' }"></div>
+            </div>
+            <p class="text-xs text-gray-500 mt-2">
+              <span v-if="progressState.current">Now: {{ progressState.current }}</span>
+              <span v-else>Starting…</span>
+            </p>
+          </div>
+
+          <!-- Summary when done -->
+          <div v-else class="rounded-lg p-4" :class="progressState.failed ? 'bg-amber-50 border border-amber-200' : 'bg-green-50 border border-green-200'">
+            <p class="text-sm font-medium" :class="progressState.failed ? 'text-amber-800' : 'text-green-800'">
+              {{ progressState.done - progressState.failed }} card(s) generated
+              <span v-if="progressState.failed">, {{ progressState.failed }} failed</span>
+            </p>
+            <p class="text-xs mt-1" :class="progressState.failed ? 'text-amber-600' : 'text-green-600'">
+              Each card now shows the event photo and the guest's own QR code in the template layout.
+            </p>
+          </div>
+
+          <!-- Live per-guest list -->
+          <div v-if="progressState.items.length" class="border rounded-lg divide-y max-h-64 overflow-y-auto">
+            <div v-for="(item, i) in progressState.items" :key="i" class="flex items-center justify-between px-3 py-2 text-sm">
+              <span class="text-gray-800">
+                {{ item.guest_name }}
+                <span class="text-xs text-gray-400 font-mono">{{ item.invite_code }}</span>
+              </span>
+              <span v-if="item.status === 'error'" class="text-xs text-red-600" :title="item.error">Failed</span>
+              <span v-else class="inline-flex items-center gap-1 text-xs text-green-600">
+                <FeatherIcon name="check" class="h-3 w-3" />
+                Card ready
+              </span>
+            </div>
+          </div>
+        </div>
+      </template>
+      <template #actions>
+        <Button v-if="progressFinished" @click="closeProgressModal" variant="solid" size="sm">Close</Button>
       </template>
     </Dialog>
 
@@ -220,9 +271,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, getCurrentInstance } from 'vue'
 import { frappeRequest } from '@/utils/api'
-import EventTabs from '@/components/EventTabs.vue'
+import EventWorkspaceHeader from '@/components/EventWorkspaceHeader.vue'
 import { useNotifications } from '@/composables/notifications'
 import { FeatherIcon } from 'frappe-ui'
 
@@ -240,7 +291,56 @@ const singleSendMedium = ref('WhatsApp')
 const sendingInvitation = ref(null)
 const sendResult = ref(null)
 
+// Card generation progress (realtime via socket)
+const showProgressModal = ref(false)
+const progressState = ref({ done: 0, total: 0, failed: 0, current: '', items: [] })
+
+const progressFinished = computed(() => progressState.value.finished)
+const progressPercent = computed(() => {
+  const { done, total } = progressState.value
+  if (!total) return 0
+  return Math.min(100, Math.round((done / total) * 100))
+})
+
 const { showError } = useNotifications()
+
+let progressSocket = null
+
+function getSocket() {
+  if (progressSocket) return progressSocket
+  const instance = getCurrentInstance()
+  progressSocket = instance?.appContext?.config?.globalProperties?.$socket || null
+  return progressSocket
+}
+
+function onCardProgress(data) {
+  if (!data) return
+  progressState.value.done = data.index || 0
+  progressState.value.total = data.total || progressState.value.total
+  progressState.value.current = data.guest_name || ''
+  progressState.value.failed = progressState.value.failed + (data.status === 'error' ? 1 : 0)
+  progressState.value.items.push({
+    guest_name: data.guest_name,
+    invite_code: data.invite_code,
+    status: data.status,
+    error: data.error,
+  })
+  if (data.index && data.total && data.index >= data.total) {
+    progressState.value.finished = true
+  }
+}
+
+function closeProgressModal() {
+  showProgressModal.value = false
+  const socket = getSocket()
+  if (socket) socket.off('invite_card_progress', onCardProgress)
+  progressState.value = { done: 0, total: 0, failed: 0, current: '', finished: false, items: [] }
+}
+
+onUnmounted(() => {
+  const socket = getSocket()
+  if (socket) socket.off('invite_card_progress', onCardProgress)
+})
 
 const deliveryMediums = [
   { label: 'WhatsApp', value: 'WhatsApp', icon: 'message-circle' },
@@ -284,6 +384,7 @@ async function loadInvitations() {
 async function generateBulkInvitations() {
   generating.value = true
   try {
+    // 1) Ensure an invitation exists for every guest
     const { guests } = await frappeRequest({
       url: 'invite.api.guest.get_list',
       params: { event: props.eventId },
@@ -303,11 +404,36 @@ async function generateBulkInvitations() {
         delivery_method: selectedMedium.value,
       },
     })
-    sendResult.value = { error: false, message: 'Invitations generated successfully.', sent: [], failed: [] }
-    showSendResultModal.value = true
+
+    // 2) Generate the personalized cards with realtime progress
+    progressState.value = { done: 0, total: 0, failed: 0, current: '', finished: false, items: [] }
+    showProgressModal.value = true
+    const socket = getSocket()
+    if (socket) {
+      socket.off('invite_card_progress', onCardProgress)
+      socket.on('invite_card_progress', onCardProgress)
+    }
+
+    try {
+      const result = await frappeRequest({
+        url: 'invite.api.invitation.generate_cards',
+        params: { event: props.eventId },
+      })
+      progressState.value.total = result.total || progressState.value.total
+      progressState.value.finished = true
+    } catch (genError) {
+      // If nothing was generated at all (e.g. no event image), close the
+      // progress modal and surface the error normally.
+      progressState.value.finished = true
+      if (!progressState.value.items.length) {
+        showProgressModal.value = false
+        throw genError
+      }
+    }
     await loadInvitations()
   } catch (e) {
     console.error('Failed to generate invitations:', e)
+    showProgressModal.value = false
     sendResult.value = { error: true, message: e.message || 'Failed to generate invitations', sent: [], failed: [] }
     showSendResultModal.value = true
   } finally {

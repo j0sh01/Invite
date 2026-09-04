@@ -1,22 +1,35 @@
 <template>
   <button
-    class="flex h-7 w-full cursor-pointer items-center rounded text-ink-gray-7 duration-300 ease-in-out focus:outline-none focus:transition-none focus-visible:rounded focus-visible:ring-2 focus-visible:ring-outline-gray-3"
-    :class="isActive ? 'bg-surface-selected shadow-sm' : 'hover:bg-surface-gray-2'"
+    class="group relative flex w-full cursor-pointer items-center rounded-lg text-[13px] font-medium text-gray-600 outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-[#C75F2C]/60"
+    :class="
+      isActive
+        ? 'bg-[#FBF2EC] text-[#8F3B1C]'
+        : 'hover:bg-[#F3ECE0] hover:text-gray-900'
+    "
     @click="handleClick"
   >
+    <span
+      v-if="isActive && !isCollapsed"
+      class="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-[#C75F2C]"
+    />
     <div
-      class="flex w-full items-center justify-between duration-300 ease-in-out px-2 py-1"
+      class="flex w-full items-center justify-between px-3 py-[7px]"
+      :class="{ 'justify-center px-0': isCollapsed }"
     >
-      <div class="flex items-center truncate">
+      <div class="flex min-w-0 items-center">
         <span class="grid flex-shrink-0 place-items-center">
           <FeatherIcon
             v-if="typeof icon === 'string'"
             :name="icon"
-            class="size-4 text-ink-gray-7"
+            class="size-[17px]"
+            :class="isActive ? 'text-[#B04C21]' : 'text-gray-400 group-hover:text-gray-500'"
           />
-          <component v-else :is="icon" class="size-4 text-ink-gray-7" />
+          <component v-else :is="icon" class="size-[17px]" />
         </span>
-        <span v-show="!isCollapsed" class="ml-2 flex-1 flex-shrink-0 truncate text-sm">
+        <span
+          v-if="!isCollapsed"
+          class="ml-3 flex-1 flex-shrink-0 truncate text-left"
+        >
           {{ label }}
         </span>
       </div>
@@ -28,6 +41,7 @@
 <script setup>
 import { computed, inject } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { FeatherIcon } from 'frappe-ui'
 
 const router = useRouter()
 const route = useRoute()
@@ -64,10 +78,8 @@ function handleClick() {
     if (typeof props.to === 'object') {
       router.push(props.to)
     } else if (props.to.startsWith('/')) {
-      // Absolute path - navigate directly
       router.push(props.to)
     } else {
-      // Route name
       router.push({ name: props.to })
     }
   }

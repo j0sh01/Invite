@@ -21,6 +21,13 @@ def on_update(doc, method=None):
 		inv.number_of_attendees = doc.number_of_attendees
 		inv.save(ignore_permissions=True)
 
+	# Advance the event status now that guests are responding
+	if doc.event:
+		try:
+			frappe.get_doc("Event", doc.event).auto_update_status("RSVPs Open")
+		except Exception:
+			pass
+
 	# Audit log
 	try:
 		from invite.invite.doctype.invite_activity_log.invite_activity_log import log_action

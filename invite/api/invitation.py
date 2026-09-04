@@ -107,6 +107,87 @@ def send(event, delivery_method="WhatsApp"):
 
 
 @frappe.whitelist()
+def generate_cards(event, guest_ids=None):
+	"""Generate (or regenerate) the personalized invitation cards for an event.
+
+	Every invitation gets a fresh card PDF built from the event's current
+	template, photo and the guest's own QR code. Progress is streamed to the
+	requesting user in realtime via the ``invite_card_progress`` socket event
+	(after each card), so the UI can show a live progress view.
+
+	Returns a summary of generated/failed cards.
+	"""
+	from invite.api.card import generate_invitation_card
+
+	if isinstance(guest_ids, str):
+		guest_ids = json.loads(guest_ids) if guest_ids else None
+
+	event_doc = frappe.get_doc("Event", event)
+	if not event_doc.image:
+		frappe.throw(
+			"Please upload an Event Image in Event Settings before generating invitation cards.",
+			title="Event Image Required",
+		)
+
+	filters = {"event": event}
+	if guest_ids:
+		filters["guest"] = ["in", guest_ids]
+
+	invitations = frappe.get_all(
+		"Invitation",
+		filters=filters,
+		fields=["name", "guest_name", "invite_code"],
+		order_by="creation ASC",
+	)
+	total = len(invitations)
+	if not total:
+		return {"generated": [], "failed": [], "total": 0, "generated_count": 0, "failed_count": 0}
+
+	generated = []
+	failed = []
+
+	for idx, inv in enumerate(invitations, start=1):
+		try:
+			result = generate_invitation_card(inv.name)
+			generated.append({
+				"invitation": inv.name,
+				"guest_name": inv.guest_name,
+				"card_url": result.get("card_url", ""),
+			})
+			frappe.publish_realtime("invite_card_progress", {
+				"index": idx,
+				"total": total,
+				"guest_name": inv.guest_name,
+				"invite_code": inv.invite_code,
+				"status": "done",
+				"card_url": result.get("card_url", ""),
+			}, user=frappe.session.user)
+		except Exception as e:
+			failed.append({"invitation": inv.name, "guest_name": inv.guest_name, "error": str(e)})
+			frappe.publish_realtime("invite_card_progress", {
+				"index": idx,
+				"total": total,
+				"guest_name": inv.guest_name,
+				"invite_code": inv.invite_code,
+				"status": "error",
+				"error": str(e)[:300],
+			}, user=frappe.session.user)
+			frappe.log_error(
+				f"Card generation failed for {inv.name} ({inv.guest_name}): {frappe.get_traceback()}",
+				"Generate Cards",
+			)
+		frappe.db.commit()
+
+	return {
+		"generated": generated,
+		"failed": failed,
+		"total": total,
+		"generated_count": len(generated),
+		"failed_count": len(failed),
+	}
+
+
+@frappe.whitelist()
 def generate_qr(invitation):
 	"""Generate QR code for an invitation."""
 	return frappe.get_attr("invite.invite.doctype.invitation.invitation.generate_qr_code")(invitation)

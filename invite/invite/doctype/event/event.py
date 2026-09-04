@@ -23,6 +23,7 @@ class Event(Document):
 
 	def on_update(self):
 		self.update_statistics()
+		self.persist_statistics()
 
 	def update_statistics(self):
 		"""Update event statistics from related documents."""
@@ -51,6 +52,52 @@ class Event(Document):
 			pluck="name",
 		)
 		self.total_checked_in = len(checkins)
+
+	def persist_statistics(self):
+		"""Write the computed statistics to the database.
+
+		`on_update` runs after the document is already saved, so plain
+		attribute changes would be lost. Persist them explicitly so the
+		event header and dashboard always reflect live activity.
+		"""
+		stat_fields = [
+			"total_guests",
+			"total_invited",
+			"total_rsvped",
+			"total_accepted",
+			"total_declined",
+			"total_checked_in",
+		]
+		self.db_set({field: getattr(self, field, 0) for field in stat_fields}, update_modified=False)
+
+	def auto_update_status(self, target_status):
+		"""Advance the event status forward based on system activity.
+
+		Rules:
+		- Forward-only: never downgrades to an earlier milestone.
+		- 'Cancelled' is manual-only and is never touched.
+		- 'Completed' is never auto-overridden.
+		- Manual changes are respected; auto logic only advances ahead.
+
+		Milestones are ordered by the 'position' field on Event Status.
+		"""
+		if self.event_status == "Cancelled":
+			return
+		if self.event_status == "Completed":
+			return
+
+		current_position = self._status_position(self.event_status)
+		target_position = self._status_position(target_status)
+		if current_position is None or target_position is None:
+			return
+		if target_position <= current_position:
+			return
+
+		self.db_set("event_status", target_status, update_modified=False)
+
+	@staticmethod
+	def _status_position(status):
+		return frappe.db.get_value("Event Status", status, "position")
 
 
 @frappe.whitelist()

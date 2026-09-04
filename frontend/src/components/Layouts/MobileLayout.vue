@@ -1,10 +1,12 @@
 <template>
-  <div class="flex h-screen w-screen">
+  <div class="flex h-screen w-screen overflow-hidden bg-canvas">
     <MobileSidebar />
-    <div class="flex h-full flex-1 flex-col overflow-auto bg-surface-white">
+    <div class="flex h-full min-w-0 flex-1 flex-col">
       <MobileAppHeader />
-      <main class="flex-1 p-4">
-        <slot />
+      <main class="flex-1 overflow-y-auto">
+        <div class="mx-auto w-full max-w-page px-4 py-5">
+          <slot />
+        </div>
       </main>
     </div>
   </div>

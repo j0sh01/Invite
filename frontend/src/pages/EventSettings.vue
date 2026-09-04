@@ -1,9 +1,12 @@
 <template>
-  <div class="max-w-3xl mx-auto">
-    <h1 class="text-xl sm:text-2xl font-semibold text-gray-900 mb-6">Event Settings</h1>
+  <div class="max-w-4xl mx-auto">
+    <EventWorkspaceHeader :event-id="props.eventId" />
 
-    <!-- Sub-navigation Tabs -->
-    <EventTabs :eventId="props.eventId" />
+    <!-- Content toolbar -->
+    <div class="mb-5 mt-8">
+      <h2 class="font-display text-xl text-gray-900">Event Settings</h2>
+      <p class="mt-0.5 text-sm text-gray-500">Details, image, configuration and communications for this event</p>
+    </div>
 
     <div v-if="loading" class="text-center py-12 text-gray-500">Loading event settings...</div>
 
@@ -66,7 +69,11 @@
 
         <div class="border-t pt-6">
           <h3 class="text-base font-medium text-gray-900 mb-4">Configuration</h3>
-          <FormControl label="Currency" type="select" v-model="form.currency" :options="currencyOptions" class="w-full sm:w-48" />
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormControl label="Invitation Card Template" type="select" v-model="form.invitation_template" :options="templateOptions" />
+            <FormControl label="Currency" type="select" v-model="form.currency" :options="currencyOptions" class="w-full" />
+          </div>
+          <p class="text-xs text-gray-500 mt-1">Controls how invitation cards look — the event photo and each guest's QR code are placed automatically.</p>
           <div class="flex flex-wrap items-center gap-4 sm:gap-6 mt-4">
             <FormControl type="checkbox" label="Enable Reminders" v-model="form.enable_reminders" />
             <FormControl type="checkbox" label="Enable Public RSVP" v-model="form.enable_public_rsvp" />
@@ -138,7 +145,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { frappeRequest } from '@/utils/api'
-import EventTabs from '@/components/EventTabs.vue'
+import EventWorkspaceHeader from '@/components/EventWorkspaceHeader.vue'
 
 const props = defineProps({ eventId: String })
 const router = useRouter()
@@ -147,6 +154,7 @@ const loading = ref(true)
 const saving = ref(false)
 const eventTypes = ref([])
 const eventStatuses = ref([])
+const templates = ref([])
 const imageInput = ref(null)
 const uploadingImage = ref(false)
 const reminderResult = ref(null)
@@ -177,6 +185,7 @@ const form = ref({
   organizer_email: '',
   max_guests: 0,
   currency: 'TZS',
+  invitation_template: '',
   enable_reminders: 1,
   enable_public_rsvp: 0,
   reminder_days_before: 3,
@@ -190,6 +199,10 @@ const eventTypeOptions = computed(() =>
 
 const eventStatusOptions = computed(() =>
   (eventStatuses.value || []).map(s => ({ label: s.status_name, value: s.status_name }))
+)
+
+const templateOptions = computed(() =>
+  (templates.value || []).map(t => ({ label: t.title, value: t.name }))
 )
 
 const currencyOptions = [
@@ -225,6 +238,7 @@ async function loadEvent() {
         organizer_email: e.organizer_email || '',
         max_guests: e.max_guests || 0,
         currency: e.currency || 'TZS',
+        invitation_template: e.invitation_template || '',
         enable_reminders: e.enable_reminders ? 1 : 0,
         enable_public_rsvp: e.enable_public_rsvp ? 1 : 0,
         reminder_days_before: e.reminder_days_before || 3,
@@ -241,12 +255,14 @@ async function loadEvent() {
 
 async function loadOptions() {
   try {
-    const [types, statuses] = await Promise.all([
+    const [types, statuses, templateData] = await Promise.all([
       frappeRequest({ url: 'frappe.client.get_list', params: { doctype: 'Event Type', fields: ['event_type_name'] } }),
       frappeRequest({ url: 'frappe.client.get_list', params: { doctype: 'Event Status', fields: ['status_name'] } }),
+      frappeRequest({ url: 'invite.api.template.get_options' }).catch(() => ({ templates: [] })),
     ])
     eventTypes.value = types || []
     eventStatuses.value = statuses || []
+    templates.value = templateData?.templates || []
   } catch (e) {
     console.error('Failed to load options:', e)
   }

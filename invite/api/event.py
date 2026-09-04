@@ -1,6 +1,7 @@
 # Copyright (c) 2024, Joshua Michael and contributors
 # MIT License. See license.txt
 
+import datetime
 import json
 
 import frappe
@@ -20,7 +21,7 @@ def get_list(filters=None, limit=20, offset=0):
 		fields=["name", "event_name", "event_type", "event_date", "event_time",
 			"venue", "location_address", "organizer_name", "organizer_contact", "organizer_email",
 			"max_guests", "description", "image", "currency",
-			"event_status", "total_guests", "total_invited", "total_rsvped",
+			"event_status", "invitation_template", "total_guests", "total_invited", "total_rsvped",
 			"total_accepted", "total_declined", "total_checked_in"],
 		limit_start=offset,
 		limit_page_length=limit,
@@ -45,7 +46,26 @@ def get(event):
 		order_by="checked_in_at DESC",
 	)
 
-	return {"event": event_doc, "recent_checkins": recent_checkins}
+	return {"event": _to_json_safe_event(event_doc), "recent_checkins": recent_checkins}
+
+
+def _to_json_safe_event(event_doc):
+	"""Return an event as a plain dict with JSON-safe values.
+
+	Frappe's MariaDB layer returns Time fields as datetime.timedelta,
+	which cannot be JSON-encoded ("Object of type timedelta is not JSON
+	serializable"). Stringify every Time field so the frontend and any
+	other API consumer receives readable values like "10:20:00".
+	"""
+	data = event_doc.as_dict()
+
+	time_fieldnames = [f.fieldname for f in frappe.get_meta("Event").fields if f.fieldtype == "Time"]
+	for fieldname in time_fieldnames:
+		value = data.get(fieldname)
+		if isinstance(value, (datetime.time, datetime.timedelta)):
+			data[fieldname] = str(value)
+
+	return data
 
 
 @frappe.whitelist()

@@ -47,10 +47,11 @@ doc_events = {
 
 # Scheduled Tasks
 scheduler_events = {
-	"daily": [
-		"invite.tasks.send_reminder_notifications",
-		"invite.tasks.send_thank_you_messages",
-	],
+		"daily": [
+			"invite.tasks.update_event_statuses",
+			"invite.tasks.send_reminder_notifications",
+			"invite.tasks.send_thank_you_messages",
+		],
 	"hourly": [
 		"invite.tasks.process_pending_invitations",
 	],

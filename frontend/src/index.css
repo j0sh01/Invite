@@ -1,5 +1,233 @@
-@import "frappe-ui/style.css";
+@import 'frappe-ui/style.css';
 
-@layer components {
-  /* App-specific styles can go here */
+/* ------------------------------------------------------------------ */
+/*  Warm editorial theme — overrides frappe-ui's cool-gray tokens     */
+/*  so every frappe-ui component (dialogs, menus, inputs, buttons)    */
+/*  inherits the parchment / espresso / terracotta look.              */
+/* ------------------------------------------------------------------ */
+
+:root {
+  /* Surfaces */
+  --surface-white: #fffdf8;
+  --surface-cards: #fffdf8;
+  --surface-modal: #fffdf8;
+  --surface-selected: #fffdf8;
+  --surface-menu-bar: #f3ecdd;
+
+  --surface-gray-1: #f8f3e9;
+  --surface-gray-2: #f1eadd;
+  --surface-gray-3: #e7dcc9;
+  --surface-gray-4: #d8c9af;
+  --surface-gray-5: #a08c6b;
+  --surface-gray-6: #57493a;
+  --surface-gray-7: #322a1e;
+
+  /* Outlines */
+  --outline-gray-1: #ece3d1;
+  --outline-gray-2: #e0d3ba;
+  --outline-gray-3: #ccbb9c;
+  --outline-gray-4: #a99677;
+  --outline-gray-5: #5e523d;
+  --outline-gray-modals: #e3d8c2;
+
+  /* Ink text */
+  --text-ink-gray-1: #e8e0cd;
+  --text-ink-gray-2: #d3c8b2;
+  --text-ink-gray-3: #bbae95;
+  --text-ink-gray-4: #a19176;
+  --text-ink-gray-5: #8a7b61;
+  --text-ink-gray-6: #6d614b;
+  --text-ink-gray-7: #5a4f3c;
+  --text-ink-gray-8: #433a2a;
+  --text-ink-gray-9: #2e271d;
+
+  /* Terracotta accent (replaces blue) */
+  --surface-blue-1: #fae9de;
+  --surface-blue-2: #efcfbb;
+  --outline-blue-1: #ecc7ae;
+  --outline-blue-2: #b04c21;
+  --text-ink-blue-1: #e2a882;
+  --text-ink-blue-2: #b04c21;
+  --text-ink-blue-3: #8f3b1c;
+  --text-ink-blue-4: #74301a;
+
+  --text-ink-white: #fffdf8;
+
+  /* App-level tokens */
+  --app-canvas: #f4ede1;
+  --app-hairline: #e6dac4;
+}
+
+[data-theme='dark'] {
+  --surface-white: #242015;
+  --surface-cards: #242015;
+  --surface-modal: #2c271b;
+  --surface-selected: #2e291d;
+  --surface-menu-bar: #1c1810;
+
+  --surface-gray-1: #332d20;
+  --surface-gray-2: #3b3426;
+  --surface-gray-3: #4a4130;
+  --surface-gray-4: #5f543e;
+  --surface-gray-5: #8a7b61;
+  --surface-gray-6: #d3c8b2;
+  --surface-gray-7: #e8e0cd;
+
+  --outline-gray-1: #4a4130;
+  --outline-gray-2: #574c38;
+  --outline-gray-3: #6f6146;
+  --outline-gray-4: #8a7b61;
+  --outline-gray-5: #d3c8b2;
+  --outline-gray-modals: #4a4130;
+
+  --text-ink-gray-1: #3f3728;
+  --text-ink-gray-2: #5a4f3a;
+  --text-ink-gray-3: #7a6c50;
+  --text-ink-gray-4: #9c8c6c;
+  --text-ink-gray-5: #baab8d;
+  --text-ink-gray-6: #cfc2a8;
+  --text-ink-gray-7: #ddd2bc;
+  --text-ink-gray-8: #ece4d2;
+  --text-ink-gray-9: #f6f0e2;
+
+  --surface-blue-1: #4a3327;
+  --surface-blue-2: #6e4630;
+  --outline-blue-1: #7a4f36;
+  --outline-blue-2: #c2683c;
+  --text-ink-blue-1: #dda27e;
+  --text-ink-blue-2: #dc8557;
+  --text-ink-blue-3: #edab87;
+  --text-ink-blue-4: #f4c9b1;
+
+  --text-ink-white: #2e271d;
+
+  --app-canvas: #1d1911;
+  --app-hairline: #3a3222;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Base                                                               */
+/* ------------------------------------------------------------------ */
+
+html,
+body {
+  background: var(--app-canvas);
+  color: var(--text-ink-gray-8);
+}
+
+::selection {
+  background: var(--text-ink-blue-2);
+  color: var(--text-ink-white);
+}
+
+/* Thin warm scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--outline-gray-3) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--outline-gray-3);
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Typography helpers                                                */
+/* ------------------------------------------------------------------ */
+
+.font-display {
+  font-family:
+    'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Palatino,
+    'URW Palladio L', Georgia, serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Shared surface primitives                                         */
+/* ------------------------------------------------------------------ */
+
+.card {
+  background: var(--surface-white);
+  border: 1px solid var(--app-hairline);
+  border-radius: 14px;
+  box-shadow:
+    0 1px 2px rgba(42, 35, 24, 0.04),
+    0 12px 28px -18px rgba(42, 35, 24, 0.18);
+}
+
+.card-hover {
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+.card-hover:hover {
+  border-color: var(--outline-gray-3);
+  box-shadow:
+    0 1px 2px rgba(42, 35, 24, 0.05),
+    0 18px 40px -18px rgba(42, 35, 24, 0.25);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Inputs — soften to match the editorial surfaces                   */
+/* ------------------------------------------------------------------ */
+
+.form-input,
+.form-textarea,
+.form-select {
+  border-radius: 8px;
+  background: var(--surface-white);
+  border: 1px solid var(--outline-gray-2);
+  color: var(--text-ink-gray-8);
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 7px 10px;
+  min-height: 36px;
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+  color: var(--text-ink-gray-4);
+}
+
+.form-input:hover,
+.form-textarea:hover,
+.form-select:hover {
+  border-color: var(--outline-gray-3);
+}
+
+.form-input:focus,
+.form-textarea:focus,
+.form-select:focus {
+  outline: none;
+  border-color: var(--text-ink-blue-3);
+  box-shadow: 0 0 0 3px rgba(143, 59, 28, 0.12);
+}
+
+.form-checkbox {
+  border-radius: 5px;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Buttons                                                            */
+/* ------------------------------------------------------------------ */
+
+/* Primary dark button gets a slightly softer edge */
+.btn:not(.btn-ghost):not(.btn-outline):not(.btn-ghosted) {
+  border-radius: 9px;
+  font-weight: 500;
 }

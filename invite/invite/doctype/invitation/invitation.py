@@ -16,6 +16,18 @@ class Invitation(Document):
 			guest = frappe.get_cached_doc("Guest", self.guest)
 			self.guest_name = guest.full_name
 
+		# Snapshot the guest's current number onto unsent invitations so the
+		# list always shows who the message will go to. The sender re-reads the
+		# live guest number for unsent rows anyway (see _resolve_contact), so a
+		# later phone correction is picked up automatically.
+		if (
+			self.status in ("Draft", "Ready", "Failed")
+			and not self.recipient_contact
+			and self.guest
+		):
+			guest = frappe.get_cached_doc("Guest", self.guest)
+			self.recipient_contact = guest.mobile_no or ""
+
 	def set_invite_code(self):
 		if not self.invite_code:
 			import secrets
@@ -81,6 +93,15 @@ def send_invitations(event, invitation_type="WhatsApp"):
 			else:
 				success = True  # Non-WhatsApp delivery methods (Email/SMS/Manual)
 
+			# The send path regenerates the invitation card when the event has
+			# an image, which updates this same row in the DB (e.g.
+			# personalized_invite_card, qr_code_image) via db_set. Reload so the
+			# save below passes Frappe's modified-timestamp concurrency check
+			# instead of failing with "Document has been modified after you
+			# have opened it".
+			inv.reload()
+			inv.delivery_method = invitation_type
+
 			if success:
 				inv.status = "Sent"
 				inv.sent_at = now()
@@ -102,6 +123,13 @@ def send_invitations(event, invitation_type="WhatsApp"):
 			except Exception:
 				pass
 			failed.append({"invitation": inv_name, "error": str(e)})
+
+	# Advance the event status now that invitations are actually going out
+	if sent:
+		try:
+			frappe.get_doc("Event", event).auto_update_status("Invitations Sent")
+		except Exception:
+			pass
 
 	# Audit log
 	if sent:
@@ -132,62 +160,87 @@ def send_invitations(event, invitation_type="WhatsApp"):
 	return {"sent": sent, "failed": failed, "total": len(invitations)}
 
 
-def _send_twilio_invitation(inv, settings, event_name):
-	"""Send a single invitation via Twilio Content API.
+def _resolve_contact(inv):
+	"""Resolve the phone number an invitation should be sent to.
 
-	Uses the configured Content SID template. Falls back to plain text
-	if no template SID is configured.
+	For invitations that have not been delivered yet (Draft/Ready/Failed) the
+	guest's CURRENT mobile number wins — so if a number was corrected on the
+	Guest record, retries and pending sends go to the new number instead of a
+	stale snapshot.
+	"""
+	if inv.status in ("Draft", "Ready", "Failed") and inv.guest:
+		guest = frappe.get_cached_doc("Guest", inv.guest)
+		if guest.mobile_no:
+			return guest.mobile_no
+	return inv.recipient_contact or ""
+
+
+def _send_twilio_invitation(inv, settings, event_name):
+	"""Send a single invitation via Twilio.
+
+	When the event has an image, the personalized card (with the guest's QR
+	code) is generated once and attached to the WhatsApp message, so the
+	guest finds the card as an attachment below the text. If the media send
+	fails (e.g. Twilio cannot reach the file URL), it falls back to the
+	Content API template, then plain text — a send never breaks because of
+	the attachment.
 	"""
 	from invite.api.twilio import send_template_message, send_whatsapp_message, get_template_sids
 
-	contact = inv.recipient_contact or ""
-	if not contact and inv.guest:
-		guest = frappe.get_cached_doc("Guest", inv.guest)
-		contact = guest.mobile_no or ""
-
+	contact = _resolve_contact(inv)
 	if not contact:
 		return False
 
-	# Get template SID for event invitation
+	base_url = frappe.utils.get_url()
+	rsvp_link = f"{base_url}/rsvp?code={inv.invite_code}"
+	event_doc = frappe.get_doc("Event", event_name)
+	message = (
+		f"Dear {inv.guest_name or 'Guest'}, you are invited to "
+		f"{event_doc.event_name} on {event_doc.event_date} at {event_doc.venue}.\n\n"
+		f"Please RSVP here: {rsvp_link}"
+	)
+
+	# 1) Preferred: text + personalized card attached
+	card_url = _get_card_url(inv)
+	if card_url:
+		if send_whatsapp_message(contact, message, media_url=frappe.utils.get_url(card_url)):
+			return True
+		# Media failed (URL not reachable, etc.) — fall through to text paths
+
+	# 2) Content API template if configured
 	tids = get_template_sids()
 	template_sid = tids.get("event_invitation", "")
-
 	if template_sid:
-		# Build template variables
-		base_url = frappe.utils.get_url()
-		rsvp_link = f"{base_url}/rsvp?code={inv.invite_code}"
-		event_doc = frappe.get_doc("Event", event_name)
+		# Build template variables.
+		# Every value is stringified: Frappe returns Time fields as
+		# datetime.timedelta, which breaks JSON encoding for the Content API.
 		variables = {
-			"1": inv.guest_name or "Guest",
-			"2": event_doc.event_name or "Event",
+			"1": str(inv.guest_name or "Guest"),
+			"2": str(event_doc.event_name or "Event"),
 			"3": str(event_doc.event_date or ""),
-			"4": event_doc.event_time or "",
-			"5": event_doc.venue or "",
-			"6": rsvp_link,
+			"4": str(event_doc.event_time or ""),
+			"5": str(event_doc.venue or ""),
+			"6": str(rsvp_link),
 		}
-		return send_template_message(contact, template_sid, variables)
-	else:
-		# Fallback: send plain text
-		base_url = frappe.utils.get_url()
-		rsvp_link = f"{base_url}/rsvp?code={inv.invite_code}"
-		event_doc = frappe.get_doc("Event", event_name)
-		message = (
-			f"Dear {inv.guest_name or 'Guest'}, you are invited to "
-			f"{event_doc.event_name} on {event_doc.event_date} at {event_doc.venue}.\n\n"
-			f"Please RSVP here: {rsvp_link}"
-		)
-		return send_whatsapp_message(contact, message)
+		if send_template_message(contact, template_sid, variables):
+			return True
+		# Template send failed (wrong variables for this template, sandbox
+		# restrictions, etc.) — fall through to plain text.
+
+	# 3) Plain text
+	return send_whatsapp_message(contact, message)
 
 
 def _send_meta_api_invitation(inv, settings, event_name):
-	"""Send a single invitation via Meta WhatsApp Cloud API."""
-	from invite.api.whatsapp import send_text_message
+	"""Send a single invitation via Meta WhatsApp Cloud API.
 
-	contact = inv.recipient_contact or ""
-	if not contact and inv.guest:
-		guest = frappe.get_cached_doc("Guest", inv.guest)
-		contact = guest.mobile_no or ""
+	Same as Twilio: the personalized card is generated once and attached to
+	the message when the event has an image, falling back to plain text if
+	the media send fails.
+	"""
+	from invite.api.whatsapp import send_text_message, send_media_message
 
+	contact = _resolve_contact(inv)
 	if not contact:
 		return False
 
@@ -200,7 +253,36 @@ def _send_meta_api_invitation(inv, settings, event_name):
 			f"Please RSVP here: {rsvp_link}"
 		)
 
+	# 1) Preferred: text + personalized card attached (PDF sent as document)
+	card_url = _get_card_url(inv)
+	if card_url:
+		ok, _err = send_media_message(contact, message, card_url)
+		if ok:
+			return True
+
+	# 2) Plain text
 	return send_text_message(contact, message)
+
+
+def _get_card_url(inv):
+	"""Return the personalized card URL for an invitation, generating it fresh.
+
+	Always regenerates so the attached card reflects the current template
+	design (never a stale copy). Returns "" when the event has no image (a
+	card needs the people photo) or card generation fails — callers then fall
+	back to text-only sends.
+	"""
+	event = frappe.get_doc("Event", inv.event)
+	if not event.image:
+		return ""
+
+	try:
+		from invite.api.card import generate_invitation_card
+		result = generate_invitation_card(inv.name)
+		return result.get("card_url", "")
+	except Exception as e:
+		frappe.log_error(f"Card generation failed for {inv.name}: {e}", "Invitation Send")
+		return ""
 
 
 @frappe.whitelist()
@@ -229,6 +311,12 @@ def send_single_invitation(invitation, delivery_method="WhatsApp"):
 		else:
 			success = True  # Non-WhatsApp delivery methods
 
+		# The send path may regenerate the invitation card (db_set on this
+		# same row), so reload before saving to pass Frappe's
+		# modified-timestamp concurrency check.
+		inv.reload()
+		inv.delivery_method = delivery_method
+
 		if success:
 			inv.status = "Sent"
 			inv.sent_at = now()
@@ -242,6 +330,13 @@ def send_single_invitation(invitation, delivery_method="WhatsApp"):
 		inv.save(ignore_permissions=True)
 		frappe.db.commit()
 
+		# Advance the event status now that an invitation went out
+		if success:
+			try:
+				frappe.get_doc("Event", inv.event).auto_update_status("Invitations Sent")
+			except Exception:
+				pass
+
 		return {
 			"success": success,
 			"message": f"Invitation sent to {inv.guest_name}" if success else f"Failed to send to {inv.guest_name}",
@@ -249,6 +344,13 @@ def send_single_invitation(invitation, delivery_method="WhatsApp"):
 		}
 
 	except Exception as e:
+		# The exception may have been raised after the card was regenerated
+		# (db_set on this row), so reload before saving the failure state or
+		# the save itself will trip the modified-timestamp check.
+		try:
+			inv.reload()
+		except Exception:
+			pass
 		inv.status = "Failed"
 		inv.delivery_status = "Failed"
 		inv.delivery_error = str(e)[:500]

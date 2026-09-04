@@ -7,7 +7,7 @@ WhatsApp Cloud API Integration
 Sends messages and media attachments via Meta's WhatsApp Business Cloud API.
 
 Requirements (set in Event Settings > WhatsApp Settings):
-- whatsapp_provider: "Meta API"
+- whatsapp_provider: "Official WhatsApp API"
 - whatsapp_api_key: Permanent access token from Meta
 - whatsapp_phone_number_id: Phone Number ID from Meta dashboard
 - whatsapp_business_number: Your business phone number (e.g. +255712345678)
@@ -28,7 +28,7 @@ def get_whatsapp_config():
     settings = frappe.get_single("Event Settings")
     return {
         "enabled": (
-            getattr(settings, "whatsapp_provider", "") == "Meta API"
+            getattr(settings, "whatsapp_provider", "") in ("Official WhatsApp API", "Meta API")
             and getattr(settings, "whatsapp_api_key", "")
             and getattr(settings, "whatsapp_phone_number_id", "")
         ),
@@ -183,7 +183,8 @@ def _upload_media(file_path_or_url, media_type, config):
 
     try:
         # Use Frappe's file manager to get the file content
-        file_content, filename, ext = get_file(file_path_or_url)
+        # (returns [filename, content] in this frappe version)
+        filename, file_content = get_file(file_path_or_url)
         if not filename:
             filename = file_path_or_url.split("/")[-1].split("?")[0] or f"media.{mime_type.split('/')[-1]}"
 
