@@ -69,9 +69,11 @@
     <Dialog :options="{ title: 'About Invite' }" v-model="showAboutModal">
       <template #body-content>
         <div class="py-4 text-center">
-          <div class="mx-auto mb-4 grid size-14 place-items-center rounded-2xl bg-[#FBF2EC]">
-            <FeatherIcon name="calendar" class="size-7 text-[#B04C21]" />
-          </div>
+          <img
+            :src="'/assets/invite/images/logo.svg'"
+            alt="Invite"
+            class="mx-auto mb-4 size-16 rounded-2xl"
+          />
           <h3 class="font-display text-lg text-gray-900">Invite</h3>
           <p class="mt-1 text-sm text-gray-500">Event Management System</p>
           <p class="mt-1 text-xs text-gray-400">v0.0.1</p>

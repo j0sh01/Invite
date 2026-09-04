@@ -9,11 +9,11 @@
       <FeatherIcon name="menu" class="size-5" />
     </button>
     <div class="flex items-center gap-2">
-      <div
-        class="grid size-6 place-items-center rounded-md bg-[#C75F2C] font-display text-[11px] font-bold text-[#FFF9EF]"
-      >
-        I
-      </div>
+      <img
+        :src="'/assets/invite/images/logo.svg'"
+        alt="Invite"
+        class="size-7 rounded-md"
+      />
       <span class="font-display text-base font-semibold text-gray-900">Invite</span>
     </div>
     <div class="flex-1" />

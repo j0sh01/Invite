@@ -84,7 +84,7 @@ def dashboard(**kwargs):
 	"""Get organizer dashboard data across all events."""
 	events = frappe.get_all(
 		"Event",
-		fields=["name", "event_name", "event_type", "event_date", "event_status",
+		fields=["name", "event_name", "event_type", "event_date", "event_status", "venue",
 				"total_guests", "total_accepted", "total_checked_in"],
 		order_by="event_date DESC",
 		limit=10,

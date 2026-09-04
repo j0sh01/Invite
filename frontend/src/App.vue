@@ -6,6 +6,11 @@
     </Layout>
     <div v-else class="flex h-screen items-center justify-center bg-gray-50">
       <div class="text-center">
+        <img
+          :src="'/assets/invite/images/logo.svg'"
+          alt="Invite"
+          class="mx-auto mb-5 size-20"
+        />
         <h1 class="text-2xl font-bold text-gray-900 mb-4">Invite - Event Management</h1>
         <Button @click="redirectToLogin" variant="solid">Login to Continue</Button>
       </div>

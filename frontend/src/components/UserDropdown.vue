@@ -6,11 +6,11 @@
         :class="isCollapsed ? 'justify-center' : ''"
       >
         <div class="flex min-w-0 items-center gap-2.5">
-          <div
-            class="grid size-8 flex-shrink-0 place-items-center rounded-lg bg-[#C75F2C] font-display text-[15px] font-bold text-[#FFF9EF]"
-          >
-            I
-          </div>
+          <img
+            :src="'/assets/invite/images/logo.svg'"
+            alt="Invite"
+            class="size-8 flex-shrink-0 rounded-lg"
+          />
           <div v-if="!isCollapsed" class="min-w-0 text-left leading-tight">
             <p class="font-display truncate text-[16px] font-semibold text-gray-900">Invite</p>
             <p class="truncate text-[11px] text-gray-500">{{ userName }}</p>
