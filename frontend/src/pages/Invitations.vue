@@ -195,8 +195,7 @@
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden sm:table-cell">Code</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
               <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">Delivery</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell">RSVP</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">Guests</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell">RSVP</th>					<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Guests</th>
               <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
             </tr>
           </thead>
@@ -222,10 +221,9 @@
                 <span :class="rsvpBadge(inv.rsvp_status)" class="text-xs px-2 py-1 rounded-full">
                   {{ inv.rsvp_status || 'Pending' }}
                 </span>
-              </td>
-              <td class="px-4 py-3 text-sm text-gray-600 hidden lg:table-cell">
-                {{ inv.number_of_attendees || 1 }}
-              </td>
+              </td>					<td class="px-4 py-3 text-sm text-gray-600 hidden md:table-cell">
+						{{ inv.number_of_attendees || 1 }}
+					</td>
               <td class="px-4 py-3 text-right">
                 <div class="flex justify-end gap-1 items-center">
                   <Button v-if="inv.qr_code_image" @click="downloadQR(inv)" variant="ghost" class="text-xs hidden sm:inline-flex">QR</Button>

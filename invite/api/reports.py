@@ -11,26 +11,40 @@ def event_summary(event, **kwargs):
 	event_doc = frappe.get_doc("Event", event)
 
 	# Guest breakdown by category
-	guests_by_category = frappe.get_all(
-		"Guest",
-		filters={"event": event},
-		fields=["category", "count(name) as count"],
-		group_by="category",
+	# (Raw SQL: frappe.get_all no longer accepts aggregate expressions like
+	# "count(name) as count" in fields on newer Frappe versions.)
+	guests_by_category = frappe.db.sql(
+		"""
+		SELECT category, COUNT(name) AS count
+		FROM `tabGuest`
+		WHERE event = %s
+		GROUP BY category
+		""",
+		event,
+		as_dict=True,
 	)
 
 	# RSVP breakdown
-	rsvp_by_status = frappe.get_all(
-		"RSVP",
-		filters={"event": event},
-		fields=["rsvp_status", "count(name) as count", "sum(number_of_attendees) as attendees"],
-		group_by="rsvp_status",
+	rsvp_by_status = frappe.db.sql(
+		"""
+		SELECT rsvp_status, COUNT(name) AS count, SUM(number_of_attendees) AS attendees
+		FROM `tabRSVP`
+		WHERE event = %s
+		GROUP BY rsvp_status
+		""",
+		event,
+		as_dict=True,
 	)
 
 	# Check-in stats
-	checkin_stats = frappe.get_all(
-		"Check-In",
-		filters={"event": event},
-		fields=["count(name) as total", "sum(is_duplicate) as duplicates"],
+	checkin_stats = frappe.db.sql(
+		"""
+		SELECT COUNT(name) AS total, SUM(is_duplicate) AS duplicates
+		FROM `tabCheck-In`
+		WHERE event = %s
+		""",
+		event,
+		as_dict=True,
 	)[0]
 
 	return {

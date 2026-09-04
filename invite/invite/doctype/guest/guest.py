@@ -45,7 +45,29 @@ class Guest(Document):
 
 	def on_update(self):
 		self.sync_unsent_invitation_contacts()
+		self.sync_invitation_attendees()
 		self.update_event_stats()
+
+	def sync_invitation_attendees(self):
+		"""Mirror the guest's card coverage onto their invitation(s).
+
+		number_of_attendees on the Guest is the source of truth (the check-in
+		scanner allows that many scans per card), so whenever it changes the
+		Invitation record is updated too - otherwise the Invitations tab keeps
+		showing a stale count for that guest (e.g. 1) while the Guests tab says
+		the card covers 2+ people.
+		"""
+		before = self.get_doc_before_save()
+		if before is not None and (before.number_of_attendees or 1) == (self.number_of_attendees or 1):
+			return
+
+		frappe.db.set_value(
+			"Invitation",
+			{"guest": self.name, "event": self.event},
+			"number_of_attendees",
+			self.number_of_attendees or 1,
+			update_modified=False,
+		)
 
 	def sync_unsent_invitation_contacts(self):
 		"""When a guest's mobile number changes, point every invitation that has

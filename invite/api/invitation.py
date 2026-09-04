@@ -78,6 +78,9 @@ def create_invitations(event, guest_ids, delivery_method="WhatsApp"):
 			inv.event = event
 			inv.guest = guest_id
 			inv.guest_name = guest.full_name
+			# Carry the guest's card coverage over so the Invitations tab shows
+			# the same number of guests as the Guests tab for this guest.
+			inv.number_of_attendees = guest.number_of_attendees or 1
 			inv.delivery_method = delivery_method
 			inv.status = "Ready"
 			inv.insert(ignore_permissions=True)

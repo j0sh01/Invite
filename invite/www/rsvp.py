@@ -1,6 +1,8 @@
 # Copyright (c) 2024, Joshua Michael and contributors
 # MIT License. See license.txt
 
+import datetime
+
 import frappe
 from frappe.utils import get_url
 
@@ -45,7 +47,7 @@ def _show_rsvp_form(context):
     context.invite_code = invite_code
     context.event_image = get_url(event.image) if event.image else ""
     context.event_date = event.event_date.strftime("%d %B %Y") if event.event_date else ""
-    context.event_time = event.event_time.strftime("%I:%M %p") if event.event_time else ""
+    context.event_time = _format_time_12h(event.event_time)
     context.guest_name = guest.full_name or guest.first_name or "Guest"
     context.current_rsvp = guest.rsvp_status or ""
     context.current_attendees = guest.number_of_attendees or 1
@@ -122,6 +124,35 @@ def _handle_rsvp_submission(context):
         return _show_rsvp_form(context)
 
     return context
+
+
+def _format_time_12h(value):
+    """Format a Frappe Time value as 12-hour clock time for display.
+
+    Frappe hands Time fields back as ``datetime.timedelta`` (seconds since
+    midnight) on some versions and ``datetime.time`` on others, so the value
+    can't be formatted with ``strftime`` directly.
+    """
+    if not value:
+        return ""
+
+    if isinstance(value, datetime.timedelta):
+        hours, minutes = divmod(int(value.total_seconds()) // 60, 60)
+        hours %= 24
+    elif isinstance(value, datetime.time):
+        hours, minutes = value.hour, value.minute
+    elif isinstance(value, str):
+        parts = value.strip().split(":")
+        if not parts or not parts[0].isdigit():
+            return ""
+        hours = int(parts[0]) % 24
+        minutes = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
+    else:
+        return str(value)
+
+    suffix = "AM" if hours < 12 else "PM"
+    hours12 = hours % 12 or 12
+    return f"{hours12}:{minutes:02d} {suffix}"
 
 
 def _get_invitation(invite_code):
