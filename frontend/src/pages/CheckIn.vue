@@ -3,100 +3,236 @@
     <EventWorkspaceHeader :event-id="props.eventId" />
 
     <!-- Content toolbar -->
-    <div class="mb-5 mt-8 flex flex-wrap items-center justify-between gap-3">
+    <div class="mb-6 mt-8 flex flex-wrap items-center justify-between gap-3">
       <div>
         <h2 class="font-display text-xl text-gray-900">Check-In</h2>
-        <p class="mt-0.5 text-sm text-gray-500">{{ stats.unique_checkins || 0 }} / {{ stats.total_guests || 0 }} guests checked in</p>
+        <p class="mt-0.5 text-sm text-gray-500">
+          {{ stats.unique_checkins || 0 }} of {{ stats.total_guests || 0 }} guests checked in
+        </p>
+      </div>
+      <div class="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5">
+        <span
+          class="relative flex h-2 w-2"
+        >
+          <span
+            v-if="scannerOn"
+            class="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"
+          ></span>
+          <span
+            class="relative inline-flex h-2 w-2 rounded-full"
+            :class="scannerOn ? 'bg-green-500' : 'bg-gray-300'"
+          ></span>
+        </span>
+        <span class="text-xs font-medium text-gray-600">
+          Scanner {{ scannerOn ? 'live' : 'paused' }}
+        </span>
       </div>
     </div>
 
     <!-- Stats -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
-      <div class="bg-white rounded-lg border p-4 text-center">
-        <p class="text-lg font-semibold text-gray-900">{{ stats.total_guests || 0 }}</p>
-        <p class="text-xs text-gray-500">Total Guests</p>
+    <div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+      <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <p class="font-display text-2xl text-gray-900">{{ stats.total_guests || 0 }}</p>
+        <p class="mt-0.5 text-xs font-medium uppercase tracking-wide text-gray-400">Total Guests</p>
       </div>
-      <div class="bg-white rounded-lg border p-4 text-center">
-        <p class="text-lg font-semibold text-green-600">{{ stats.unique_checkins || 0 }}</p>
-        <p class="text-xs text-gray-500">Checked In</p>
+      <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <p class="font-display text-2xl text-green-600">{{ stats.unique_checkins || 0 }}</p>
+        <p class="mt-0.5 text-xs font-medium uppercase tracking-wide text-gray-400">Checked In</p>
       </div>
-      <div class="bg-white rounded-lg border p-4 text-center">
-        <p class="text-lg font-semibold text-blue-600">{{ stats.rsvp_accepted || 0 }}</p>
-        <p class="text-xs text-gray-500">RSVP Accepted</p>
+      <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <p class="font-display text-2xl text-blue-600">{{ stats.rsvp_accepted || 0 }}</p>
+        <p class="mt-0.5 text-xs font-medium uppercase tracking-wide text-gray-400">RSVP Accepted</p>
       </div>
-      <div class="bg-white rounded-lg border p-4 text-center">
-        <p class="text-lg font-semibold text-amber-600">{{ stats.checkin_rate || 0 }}%</p>
-        <p class="text-xs text-gray-500">Check-In Rate</p>
+      <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <p class="font-display text-2xl text-amber-600">{{ stats.checkin_rate || 0 }}%</p>
+        <p class="mt-0.5 text-xs font-medium uppercase tracking-wide text-gray-400">Check-In Rate</p>
       </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <!-- QR Scanner Area -->
-      <div class="bg-white rounded-lg border p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-base font-medium text-gray-900">Scan QR Code</h3>
-          <span class="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">Live</span>
-        </div>
-        <QrScanner ref="qrScannerRef" @detected="onQrDetected" @switch-to-manual="showManualEntry = true" />
-
-        <div v-if="showManualEntry" class="mt-4 pt-4 border-t border-gray-200">
-          <div class="flex items-center justify-between mb-2">
-            <p class="text-xs text-gray-500">Or paste invite code manually:</p>
-            <button @click="showManualEntry = false" class="text-gray-400 hover:text-gray-600">
-              <FeatherIcon name="x" class="h-3.5 w-3.5" />
-            </button>
-          </div>
-          <div class="flex gap-2">
-            <Input
-              v-model="qrInput"
-              placeholder="Paste invite code..."
-              class="flex-1"
-              @keyup.enter="processQR"
+    <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+      <!-- ==== Left column: scanner console ==== -->
+      <div class="space-y-6 lg:col-span-2">
+        <!-- Scanner card -->
+        <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+          <div class="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+            <div class="flex items-center gap-2.5">
+              <span class="grid size-8 place-items-center rounded-lg bg-gray-900 text-white">
+                <FeatherIcon name="camera" class="size-4" />
+              </span>
+              <div>
+                <h3 class="text-sm font-semibold text-gray-900">QR Scanner</h3>
+                <p class="text-xs text-gray-400">Hold a guest's QR code up to the camera</p>
+              </div>
+            </div>
+            <Button
+              v-if="scannerOn"
+              @click="qrScannerRef?.stopCamera()"
+              variant="ghost"
+              size="sm"
+              iconLeft="pause"
+              label="Pause"
             />
-            <Button @click="processQR" size="sm" :loading="processingQR">
-              Check In
-            </Button>
+          </div>
+
+          <div class="p-5">
+            <QrScanner
+              ref="qrScannerRef"
+              @detected="onQrDetected"
+              @active-change="scannerOn = $event"
+              @switch-to-manual="showManualEntry = true"
+            />
+
+            <!-- Manual code entry (just in case) -->
+            <div v-if="showManualEntry" class="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-4">
+              <div class="mb-2 flex items-center justify-between">
+                <p class="text-xs font-medium text-gray-500">Or paste invite code manually:</p>
+                <button @click="showManualEntry = false" class="text-gray-400 hover:text-gray-600">
+                  <FeatherIcon name="x" class="h-3.5 w-3.5" />
+                </button>
+              </div>
+              <div class="flex gap-2">
+                <Input
+                  v-model="qrInput"
+                  placeholder="Paste invite code... (URLs also work)"
+                  class="flex-1"
+                  @keyup.enter="processQR"
+                />
+                <Button @click="processQR" size="sm" :loading="processingQR">
+                  Check In
+                </Button>
+              </div>
+            </div>
+
+            <!-- Last scan strip -->
+            <div v-if="lastScan" class="mt-4">
+              <div
+                class="flex items-center gap-3 rounded-xl border px-4 py-3"
+                :class="lastScan.success ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'"
+              >
+                <FeatherIcon
+                  :name="lastScan.success ? (lastScan.is_duplicate ? 'alert-circle' : 'check-circle') : 'alert-triangle'"
+                  :class="lastScan.success ? (lastScan.is_duplicate ? 'text-amber-500' : 'text-green-500') : 'text-red-500'"
+                  class="size-5 flex-shrink-0"
+                />
+                <div class="min-w-0 flex-1">
+                  <p class="text-sm font-medium text-gray-900">
+                    {{ lastScan.success ? lastScan.guest_name || 'Checked in' : 'Check-in failed' }}
+                  </p>
+                  <p class="truncate text-xs" :class="lastScan.success ? 'text-gray-500' : 'text-red-600'">
+                    {{ lastScan.message }}
+                    <span v-if="lastScan.time" class="text-gray-400"> · {{ lastScan.time }}</span>
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Manual Check-In -->
-      <div class="bg-white rounded-lg border p-6">
-        <h3 class="text-base font-medium text-gray-900 mb-4">Manual Check-In</h3>
-        <Input
-          v-model="searchQuery"
-          placeholder="Search by name, invite code, or phone..."
-          class="mb-4"
-          @input="searchGuests"
-        />
-
-        <div v-if="searchResults.length" class="space-y-2 max-h-80 overflow-y-auto">
-          <div
-            v-for="guest in searchResults"
-            :key="guest.name"
-            class="flex items-center justify-between p-3 rounded-lg border hover:bg-gray-50"
-          >
-            <div>
-              <p class="text-sm font-medium text-gray-900">{{ guest.full_name }}</p>
-              <p class="text-xs text-gray-500">
-                {{ guest.invite_code }}
-                <span v-if="guest.mobile_no"> · {{ guest.mobile_no }}</span>
-              </p>
-              <p class="text-xs text-gray-400">{{ guest.category }}</p>
-            </div>
-            <div class="flex items-center gap-2">
-              <span v-if="guest.rsvp_status" :class="rsvpBadge(guest.rsvp_status)" class="text-xs px-2 py-1 rounded-full">
-                {{ guest.rsvp_status }}
+      <!-- ==== Right column: manual search + recent ==== -->
+      <div class="space-y-6 lg:col-span-1">
+        <!-- Manual check-in by search -->
+        <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+          <div class="border-b border-gray-100 px-5 py-4">
+            <div class="flex items-center gap-2.5">
+              <span class="grid size-8 place-items-center rounded-lg bg-blue-600 text-white">
+                <FeatherIcon name="user-check" class="size-4" />
               </span>
-              <Button @click="checkInGuest(guest.name, guest.full_name)" variant="solid" size="sm">
-                Check In
-              </Button>
+              <div>
+                <h3 class="text-sm font-semibold text-gray-900">Find a Guest</h3>
+                <p class="text-xs text-gray-400">Search by name, invite code or phone</p>
+              </div>
+            </div>
+          </div>
+          <div class="p-5">
+            <Input
+              v-model="searchQuery"
+              placeholder="Search guests..."
+              class="mb-4"
+              @input="searchGuests"
+            />
+
+            <div v-if="searchResults.length" class="max-h-80 space-y-2 overflow-y-auto">
+              <div
+                v-for="guest in searchResults"
+                :key="guest.name"
+                class="flex items-center justify-between gap-3 rounded-lg border border-gray-200 p-3 transition-colors hover:bg-gray-50"
+              >
+                <div class="min-w-0 flex-1">
+                  <p class="truncate text-sm font-medium text-gray-900">{{ guest.full_name }}</p>
+                  <p class="truncate text-xs text-gray-400">
+                    <span class="font-mono">{{ guest.invite_code }}</span>
+                    <span v-if="guest.mobile_no"> · {{ guest.mobile_no }}</span>
+                  </p>
+                  <p class="text-xs text-gray-400">{{ guest.category }}</p>
+                </div>
+                <div class="flex flex-shrink-0 items-center gap-2">
+                  <span
+                    v-if="guest.rsvp_status"
+                    :class="rsvpBadge(guest.rsvp_status)"
+                    class="rounded-full px-2 py-0.5 text-[10px] font-medium"
+                  >
+                    {{ guest.rsvp_status }}
+                  </span>
+                  <Button @click="checkInGuest(guest.name, guest.full_name)" variant="solid" size="sm">
+                    Check In
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div
+              v-else-if="searchQuery && !searching"
+              class="py-8 text-center text-sm text-gray-400"
+            >
+              No guests found matching “{{ searchQuery }}”
+            </div>
+            <div v-else-if="!searchQuery" class="py-4 text-center text-xs text-gray-300">
+              Type at least 2 characters to search
             </div>
           </div>
         </div>
 
-        <div v-else-if="searchQuery && !searching" class="text-center py-8 text-gray-500 text-sm">
-          No guests found matching "{{ searchQuery }}"
+        <!-- Recent check-ins -->
+        <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+          <div class="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+            <div class="flex items-center gap-2.5">
+              <span class="grid size-8 place-items-center rounded-lg bg-emerald-600 text-white">
+                <FeatherIcon name="activity" class="size-4" />
+              </span>
+              <h3 class="text-sm font-semibold text-gray-900">Recent Check-Ins</h3>
+            </div>
+            <span class="text-xs text-gray-400">Last {{ recentCheckins.length }}</span>
+          </div>
+          <div class="max-h-[26rem] divide-y divide-gray-50 overflow-y-auto">
+            <div
+              v-for="ci in recentCheckins"
+              :key="ci.name"
+              class="flex items-center justify-between gap-3 px-5 py-3 text-sm"
+            >
+              <div class="flex min-w-0 items-center gap-3">
+                <FeatherIcon
+                  :name="ci.is_duplicate ? 'alert-circle' : 'check-circle'"
+                  :class="ci.is_duplicate ? 'text-amber-500' : 'text-emerald-500'"
+                  class="size-4 flex-shrink-0"
+                />
+                <div class="min-w-0">
+                  <p class="truncate text-gray-900">{{ ci.guest_name }}</p>
+                  <p class="truncate text-xs text-gray-400">
+                    {{ ci.check_in_method }} · {{ ci.number_of_attendees || 1 }} guest(s)
+                  </p>
+                </div>
+              </div>
+              <div class="flex-shrink-0 text-right">
+                <p class="text-xs text-gray-500">{{ ci.checked_in_at ? formatDateTime(ci.checked_in_at) : '' }}</p>
+                <p v-if="ci.checked_in_by" class="text-[11px] text-gray-300">by {{ ci.checked_in_by }}</p>
+                <p v-if="ci.is_duplicate" class="text-[11px] font-medium text-amber-500">Duplicate scan</p>
+              </div>
+            </div>
+            <div v-if="!recentCheckins.length" class="px-5 py-10 text-center text-sm text-gray-400">
+              No check-ins yet — scan the first guest's QR code to get started
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -106,7 +242,7 @@
       <template #body-content>
         <div class="py-2 space-y-3">
           <div class="flex items-center gap-3 p-4 rounded-lg" :class="checkinResult?.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'">
-            <FeatherIcon :name="checkinResult?.success ? 'check-circle' : 'alert-triangle'" 
+            <FeatherIcon :name="checkinResult?.success ? 'check-circle' : 'alert-triangle'"
               :class="checkinResult?.success ? 'text-green-500' : 'text-red-500'" class="h-10 w-10 flex-shrink-0" />
             <div>
               <p class="text-sm font-medium" :class="checkinResult?.success ? 'text-green-800' : 'text-red-800'">
@@ -132,33 +268,6 @@
         <Button @click="showResultModal = false" variant="solid" size="sm">Close</Button>
       </template>
     </Dialog>
-
-    <!-- Recent Check-Ins -->
-    <div class="bg-white rounded-lg border mt-6">
-      <div class="px-6 py-4 border-b">
-        <h3 class="text-base font-medium text-gray-900">Recent Check-Ins</h3>
-      </div>
-      <div class="divide-y">
-        <div v-for="ci in recentCheckins" :key="ci.name" class="px-4 sm:px-6 py-3 flex items-center justify-between text-sm">
-          <div class="flex items-center gap-3">
-            <FeatherIcon :name="ci.is_duplicate ? 'alert-circle' : 'check-circle'"
-              :class="ci.is_duplicate ? 'text-amber-500' : 'text-green-500'" class="h-5 w-5" />
-            <div>
-              <p class="text-gray-900">{{ ci.guest_name }}</p>
-              <p class="text-xs text-gray-400">{{ ci.check_in_method }} · {{ ci.number_of_attendees || 1 }} guest(s)</p>
-            </div>
-          </div>
-          <div class="text-right">
-            <p class="text-gray-500">{{ ci.checked_in_at ? formatDateTime(ci.checked_in_at) : '' }}</p>
-            <p v-if="ci.checked_in_by" class="text-xs text-gray-400">by {{ ci.checked_in_by }}</p>
-            <p v-if="ci.is_duplicate" class="text-xs text-amber-500">Duplicate scan</p>
-          </div>
-        </div>
-        <div v-if="!recentCheckins.length" class="px-6 py-8 text-center text-gray-500 text-sm">
-          No check-ins yet
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -177,10 +286,15 @@ const searching = ref(false)
 const qrInput = ref('')
 const processingQR = ref(false)
 const qrScannerRef = ref(null)
+// Real camera state, reported by QrScanner via active-change
+const scannerOn = ref(false)
+const resultWasScanning = ref(false)
+const manualWasScanning = ref(false)
 const showResultModal = ref(false)
 const showManualEntry = ref(false)
 const checkinResult = ref(null)
 const recentCheckins = ref([])
+const lastScan = ref(null)
 
 onMounted(async () => {
   await Promise.all([loadStats(), loadRecentCheckins()])
@@ -227,28 +341,48 @@ async function searchGuests() {
   }
 }
 
-// Pause the camera when manual entry is shown
+// Pause the camera while manual entry is shown; resume when it is closed again
 watch(showManualEntry, (val) => {
-  if (val && qrScannerRef.value?.pauseCamera) {
-    qrScannerRef.value.pauseCamera()
+  if (val) {
+    manualWasScanning.value = scannerOn.value
+    qrScannerRef.value?.pauseCamera()
+  } else {
+    if (manualWasScanning.value) {
+      qrScannerRef.value?.startCamera()
+    }
+    manualWasScanning.value = false
   }
 })
 
-// Clear scanner status when result modal is closed
+// Pause the camera while the result modal is up so the same card can't be
+// re-scanned mid-flow; resume automatically when the modal is closed.
 watch(showResultModal, (val) => {
-  if (!val && qrScannerRef.value?.clearStatus) {
-    qrScannerRef.value.clearStatus()
+  if (val) {
+    qrScannerRef.value?.pauseCamera()
+  } else {
+    if (resultWasScanning.value) {
+      qrScannerRef.value?.startCamera()
+    }
+    resultWasScanning.value = false
+    qrScannerRef.value?.clearStatus()
   }
 })
+
+function beginCheckinFlow() {
+  resultWasScanning.value = scannerOn.value
+  qrScannerRef.value?.pauseCamera()
+}
 
 function onQrDetected(code) {
-  qrInput.value = code
+  qrInput.value = (code || '').trim()
   showManualEntry.value = false
   processQR()
 }
 
 async function processQR() {
+  qrInput.value = (qrInput.value || '').trim()
   if (!qrInput.value) return
+  beginCheckinFlow()
   processingQR.value = true
   try {
     const result = await frappeRequest({
@@ -263,6 +397,7 @@ async function processQR() {
       scans_used: result.scans_used,
       scans_allowed: result.scans_allowed,
     }
+    setLastScan(checkinResult.value)
     showResultModal.value = true
     qrInput.value = ''
     await Promise.all([loadStats(), loadRecentCheckins()])
@@ -273,13 +408,29 @@ async function processQR() {
       guest_name: null,
       is_duplicate: false,
     }
+    setLastScan(checkinResult.value)
     showResultModal.value = true
   } finally {
     processingQR.value = false
   }
 }
 
+function setLastScan(result) {
+  lastScan.value = {
+    success: !!result.success,
+    guest_name: result.guest_name || null,
+    is_duplicate: !!result.is_duplicate,
+    message: result.success
+      ? result.is_duplicate
+        ? 'Already checked in — duplicate scan'
+        : 'Checked in successfully'
+      : result.message || 'Invalid code',
+    time: new Date().toLocaleTimeString(),
+  }
+}
+
 async function checkInGuest(guestId, guestName) {
+  beginCheckinFlow()
   try {
     const result = await frappeRequest({
       url: 'invite.invite.doctype.check_in.check_in.manual_checkin',
@@ -294,6 +445,7 @@ async function checkInGuest(guestId, guestName) {
         scans_used: result.scans_used,
         scans_allowed: result.scans_allowed,
       }
+      setLastScan(checkinResult.value)
       showResultModal.value = true
       searchQuery.value = ''
       searchResults.value = []
@@ -306,6 +458,7 @@ async function checkInGuest(guestId, guestName) {
       guest_name: guestName,
       is_duplicate: false,
     }
+    setLastScan(checkinResult.value)
     showResultModal.value = true
   }
 }

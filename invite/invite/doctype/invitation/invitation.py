@@ -3,7 +3,7 @@
 
 import frappe
 from frappe.model.document import Document
-from frappe.utils import now, get_url
+from frappe.utils import now
 
 
 class Invitation(Document):
@@ -34,11 +34,15 @@ class Invitation(Document):
 			self.invite_code = secrets.token_hex(8).upper()
 
 	def set_qr_code_data(self):
-		"""Generate QR code data with event and guest info."""
+		"""Generate QR code data.
+
+		The QR encodes the bare invite code so it scans cleanly at the
+		frontdesk. (Older records encoded a full ``scan_qr`` API URL - the
+		check-in endpoint still accepts that legacy form, so existing cards
+		keep working.)
+		"""
 		if self.invite_code and not self.qr_code:
-			base_url = get_url()
-			qr_data = f"{base_url}/api/method/invite.api.check_in.scan_qr?code={self.invite_code}&event={self.event}"
-			self.qr_code = qr_data
+			self.qr_code = self.invite_code
 
 	def on_update(self):
 		self.update_guest_invitation_status()

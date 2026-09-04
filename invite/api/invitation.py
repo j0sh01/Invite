@@ -12,8 +12,9 @@ def before_insert(doc, method=None):
 		doc.invite_code = secrets.token_hex(8).upper()
 
 	if not doc.qr_code and doc.invite_code:
-		from frappe.utils import get_url
-		doc.qr_code = f"{get_url()}/api/method/invite.api.check_in.scan_qr?code={doc.invite_code}&event={doc.event}"
+		# Encode the bare invite code - the QR scans cleanly at the frontdesk.
+		# (The check-in endpoint also accepts the legacy full-URL form.)
+		doc.qr_code = doc.invite_code
 
 
 def after_insert(doc, method=None):

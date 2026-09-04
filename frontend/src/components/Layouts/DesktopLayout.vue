@@ -22,16 +22,35 @@
 import { provide, ref, watch } from 'vue'
 import AppSidebar from '@/components/Layouts/AppSidebar.vue'
 import AppHeader from '@/components/Layouts/AppHeader.vue'
+import { viewportWidth, isCompactDesktop } from '@/composables/settings'
 
-const isSidebarCollapsed = ref(false)
-try {
-  const stored = localStorage.getItem('isSidebarCollapsed')
-  if (stored !== null) {
-    isSidebarCollapsed.value = stored === 'true'
+function readStoredCollapsed() {
+  try {
+    const stored = localStorage.getItem('isSidebarCollapsed')
+    return stored !== null ? stored === 'true' : false
+  } catch (e) {
+    return false
   }
-} catch (e) { /* localStorage may not be available */ }
+}
+
+// The user's explicit sidebar preference, only applied on wide screens (>= 1024px)
+const storedCollapsed = ref(readStoredCollapsed())
+
+// On narrow desktop viewports (tablets / small windows) the sidebar starts
+// collapsed so page content keeps enough room; the user can still expand it.
+const isSidebarCollapsed = ref(isCompactDesktop.value)
+
+watch(viewportWidth, () => {
+  isSidebarCollapsed.value = isCompactDesktop.value
+    ? true
+    : storedCollapsed.value
+})
 
 watch(isSidebarCollapsed, (val) => {
+  // Only persist the user's own choice on wide screens - auto-collapse on
+  // narrow viewports must not overwrite the stored preference.
+  if (isCompactDesktop.value) return
+  storedCollapsed.value = val
   try {
     localStorage.setItem('isSidebarCollapsed', val)
   } catch (e) { /* localStorage may not be available */ }

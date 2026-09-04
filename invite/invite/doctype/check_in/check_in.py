@@ -64,7 +64,7 @@ class CheckIn(Document):
 @frappe.whitelist()
 def scan_qr():
 	"""Handle QR code scan for check-in."""
-	code = frappe.local.form_dict.get("code")
+	code = _extract_invite_code(frappe.local.form_dict.get("code"))
 	event = frappe.local.form_dict.get("event")
 
 	if not code or not event:
@@ -206,6 +206,28 @@ def manual_checkin(event, guest=None, invite_code=None):
 		"scans_used": scans_used,
 		"scans_allowed": scans_allowed,
 	}
+
+
+def _extract_invite_code(raw):
+	"""Extract the invite code from a scanned or pasted value.
+
+	Newer invitation QR codes encode the bare invite code, but older records
+	(and cards generated from them) embedded the full ``scan_qr`` API URL, e.g.
+	``https://host/api/method/invite.api.check_in.scan_qr?code=ABC&event=EV``.
+	Accept both forms so scanning and pasting always resolve to the code.
+	"""
+	raw = (raw or "").strip()
+	if not raw:
+		return None
+
+	if "/api/method/invite.api.check_in.scan_qr" in raw:
+		from urllib.parse import parse_qs, urlparse
+		params = parse_qs(urlparse(raw).query)
+		code = params.get("code")
+		if code:
+			return code[0].strip()
+
+	return raw
 
 
 def _count_scans(event, guest):

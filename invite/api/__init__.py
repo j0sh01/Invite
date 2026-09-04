@@ -21,15 +21,20 @@ def check_app_permission():
 	if frappe.session.user == "Administrator":
 		return True
 
-	from frappe.config import get_modules_from_all_apps_for_user
-	allowed_modules = get_modules_from_all_apps_for_user()
-	allowed_modules = [x["module_name"] for x in allowed_modules]
-
-	if "Invite" not in allowed_modules:
+	roles = frappe.get_roles()
+	if not any(role in ["System Manager", "Event Manager"] for role in roles):
 		return False
 
-	roles = frappe.get_roles()
-	if any(role in ["System Manager", "Event Manager"] for role in roles):
+	# `get_modules_from_all_apps_for_user` only exists on newer Frappe versions.
+	# On older versions, frappe.config doesn't expose it, so importing it here
+	# crashes desk boot with an ImportError (500 on every page). Fall back to a
+	# role-only check when the API is unavailable.
+	try:
+		from frappe.config import get_modules_from_all_apps_for_user
+	except ImportError:
 		return True
 
-	return False
+	allowed_modules = get_modules_from_all_apps_for_user()
+	allowed_modules = [x.get("module_name") for x in allowed_modules]
+
+	return "Invite" in allowed_modules

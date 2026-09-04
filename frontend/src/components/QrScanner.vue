@@ -93,7 +93,12 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { QrcodeStream } from 'vue-qrcode-reader'
 
-const emit = defineEmits(['detected', 'switch-to-manual'])
+const props = defineProps({
+  // Start the camera as soon as the component mounts (and permissions allow)
+  autoStart: { type: Boolean, default: true },
+})
+
+const emit = defineEmits(['detected', 'switch-to-manual', 'active-change'])
 
 const cameraActive = ref(false)
 const cameraEnabled = ref(false)
@@ -105,44 +110,73 @@ onMounted(() => {
   // Check if camera access is available
   if (navigator.mediaDevices?.getUserMedia) {
     cameraEnabled.value = true
+    if (props.autoStart) {
+      startCamera()
+    }
   } else {
     statusMessage.value = 'Camera not available on this device/browser.'
     statusType.value = 'error'
   }
 })
 
+function setCameraActive(active) {
+  if (cameraActive.value === active) return
+  cameraActive.value = active
+  emit('active-change', active)
+}
+
+function startCamera() {
+  if (!cameraEnabled.value) return
+  if (cameraActive.value) return
+  setCameraActive(true)
+}
+
+function stopCamera() {
+  if (!cameraActive.value) return
+  setCameraActive(false)
+  clearStatus()
+}
+
+// Backwards-compatible aliases used by the pages
+function pauseCamera() {
+  stopCamera()
+}
+
+function resumeCamera() {
+  startCamera()
+}
+
+function toggleCamera() {
+  if (cameraActive.value) {
+    stopCamera()
+  } else {
+    startCamera()
+  }
+}
+
 defineExpose({
+  startCamera,
+  stopCamera,
   pauseCamera,
+  resumeCamera,
   clearStatus,
+  isCameraActive: () => cameraActive.value,
 })
 
 onUnmounted(() => {
   if (scanTimeout.value) {
     clearTimeout(scanTimeout.value)
   }
-
 })
 
-function toggleCamera() {
-  cameraActive.value = !cameraActive.value
-  if (!cameraActive.value) {
-    clearStatus()
-  }
-}
-
-function pauseCamera() {
-  cameraActive.value = false
-  clearStatus()
-}
-
 function onCameraOn() {
-  cameraActive.value = true
+  setCameraActive(true)
   statusMessage.value = 'Camera is ready — point at a QR code.'
   statusType.value = 'info'
 }
 
 function onCameraError(err) {
-  cameraActive.value = false
+  setCameraActive(false)
   if (err.name === 'NotAllowedError') {
     statusMessage.value = 'Camera access denied. Please allow camera permissions and try again.'
   } else if (err.name === 'NotFoundError') {
@@ -155,14 +189,13 @@ function onCameraError(err) {
 
 function onDetect(detectedCodes) {
   if (!detectedCodes?.length) return
+  if (!cameraActive.value) return
 
   const rawValue = detectedCodes[0]?.rawValue
   if (!rawValue) return
 
-  // Debounce: prevent rapid re-scans
+  // Debounce: prevent rapid re-scans of the same code still in frame
   if (scanTimeout.value) return
-
-  // Brief pause to prevent double-scanning
   scanTimeout.value = setTimeout(() => {
     scanTimeout.value = null
   }, 2000)

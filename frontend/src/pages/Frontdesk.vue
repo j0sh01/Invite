@@ -56,12 +56,12 @@
           </div>
         </div>
         <div class="flex items-center gap-2 flex-shrink-0">
-          <span class="relative flex h-2.5 w-2.5" v-if="scanning">
+          <span class="relative flex h-2.5 w-2.5" v-if="scannerOn">
             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
             <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
           </span>
-          <span class="text-xs font-medium" :class="scanning ? 'text-green-600' : 'text-gray-500'">
-            {{ scanning ? 'Scanning' : 'Paused' }}
+          <span class="text-xs font-medium" :class="scannerOn ? 'text-green-600' : 'text-gray-500'">
+            {{ scannerOn ? 'Scanning' : 'Paused' }}
           </span>
         </div>
       </div>
@@ -95,16 +95,16 @@
               <h3 class="text-sm font-semibold text-gray-900">QR Scanner</h3>
               <Button
                 @click="toggleScanner"
-                :variant="scanning ? 'solid' : 'ghost'"
+                :variant="scannerOn ? 'solid' : 'ghost'"
                 size="sm"
                 theme="green"
               >
-                <FeatherIcon :name="scanning ? 'pause' : 'play'" class="h-3.5 w-3.5 mr-1.5" />
-                {{ scanning ? 'Pause' : 'Start' }}
+                <FeatherIcon :name="scannerOn ? 'pause' : 'play'" class="h-3.5 w-3.5 mr-1.5" />
+                {{ scannerOn ? 'Pause' : 'Start' }}
               </Button>
             </div>
 
-            <QrScanner ref="qrScannerRef" @detected="onQrDetected" @switch-to-manual="showManualEntry = true" />
+            <QrScanner ref="qrScannerRef" @detected="onQrDetected" @active-change="onScannerActiveChange" />
 
             <!-- Manual code entry -->
             <div class="mt-4 pt-4 border-t border-gray-200">
@@ -181,7 +181,7 @@
       <div
         v-if="showResultOverlay"
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-        @click="showResultOverlay = false"
+        @click="closeResultOverlay"
       >
         <div
           class="mx-4 max-w-sm w-full rounded-2xl p-6 shadow-2xl text-center transform transition-all"
@@ -294,7 +294,9 @@ const searching = ref(false)
 const qrInput = ref('')
 const processingQR = ref(false)
 const qrScannerRef = ref(null)
-const scanning = ref(true)
+// Real camera state, reported by QrScanner via active-change
+const scannerOn = ref(false)
+const wasScanningBeforeResult = ref(false)
 
 const showResultModal = ref(false)
 const showResultOverlay = ref(false)
@@ -382,16 +384,41 @@ async function searchGuests() {
 }
 
 function toggleScanner() {
-  scanning.value = !scanning.value
+  if (scannerOn.value) {
+    qrScannerRef.value?.stopCamera()
+  } else {
+    qrScannerRef.value?.startCamera()
+  }
+}
+
+function onScannerActiveChange(active) {
+  scannerOn.value = active
+}
+
+// Pause the camera while a check-in result is being shown so the same card
+// can't be re-scanned mid-flow, then automatically resume afterwards.
+function beginCheckinFlow() {
+  wasScanningBeforeResult.value = scannerOn.value
+  qrScannerRef.value?.stopCamera()
+}
+
+function closeResultOverlay() {
+  showResultOverlay.value = false
+  if (wasScanningBeforeResult.value) {
+    qrScannerRef.value?.startCamera()
+  }
+  wasScanningBeforeResult.value = false
 }
 
 function onQrDetected(code) {
-  qrInput.value = code
+  qrInput.value = (code || '').trim()
   processQR()
 }
 
 async function processQR() {
+  qrInput.value = (qrInput.value || '').trim()
   if (!qrInput.value || !selectedEvent.value) return
+  beginCheckinFlow()
   processingQR.value = true
   try {
     const result = await frappeRequest({
@@ -407,7 +434,7 @@ async function processQR() {
       attendees: result.number_of_attendees || 1,
     }
     showResultOverlay.value = true
-    setTimeout(() => { showResultOverlay.value = false }, 2500)
+    setTimeout(() => { closeResultOverlay() }, 2500)
 
     qrInput.value = ''
     await Promise.all([loadStats(), loadRecentCheckins()])
@@ -422,7 +449,7 @@ async function processQR() {
       message: msg,
     }
     showResultOverlay.value = true
-    setTimeout(() => { showResultOverlay.value = false }, 3000)
+    setTimeout(() => { closeResultOverlay() }, 3000)
   } finally {
     processingQR.value = false
   }
@@ -430,6 +457,7 @@ async function processQR() {
 
 async function manualCheckIn(guest) {
   if (!selectedEvent.value) return
+  beginCheckinFlow()
   try {
     const result = await frappeRequest({
       url: 'invite.invite.doctype.check_in.check_in.manual_checkin',
@@ -443,7 +471,7 @@ async function manualCheckIn(guest) {
       attendees: result.number_of_attendees || 1,
     }
     showResultOverlay.value = true
-    setTimeout(() => { showResultOverlay.value = false }, 2500)
+    setTimeout(() => { closeResultOverlay() }, 2500)
 
     searchQuery.value = ''
     searchResults.value = []
@@ -459,7 +487,7 @@ async function manualCheckIn(guest) {
       message: msg,
     }
     showResultOverlay.value = true
-    setTimeout(() => { showResultOverlay.value = false }, 3000)
+    setTimeout(() => { closeResultOverlay() }, 3000)
   }
 }
 
